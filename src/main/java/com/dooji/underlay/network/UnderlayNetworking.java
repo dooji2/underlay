@@ -1,0 +1,66 @@
+package com.dooji.underlay.network;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.dooji.underlay.UnderlayManager;
+import com.dooji.underlay.network.payloads.AddOverlayPayload;
+import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
+import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
+
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.ItemScatterer;
+import net.minecraft.util.math.BlockPos;
+
+public class UnderlayNetworking {
+	public static void init() {
+		PayloadTypeRegistry.playS2C().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			ServerPlayerEntity player = handler.getPlayer();
+			var world = player.getWorld();
+
+			Map<BlockPos, NbtCompound> tags = new HashMap<>();
+			UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
+				tags.put(pos, NbtHelper.fromBlockState(state))
+			);
+
+			if (!tags.isEmpty()) {
+				ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
+			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
+			ServerPlayerEntity player = context.player();
+			ServerWorld world = (ServerWorld) player.getWorld();
+			BlockPos pos = payload.pos();
+
+			if (UnderlayManager.hasOverlay(world, pos)) {
+				var old = UnderlayManager.getOverlay(world, pos);
+				UnderlayManager.removeOverlay(world, pos);
+				
+				if (!player.isCreative()) {
+					ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
+				}
+			}
+		});
+	}
+
+	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
+		var tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
+		var payload = new AddOverlayPayload(pos, tag);
+
+		for (ServerPlayerEntity p : world.getPlayers()) {
+			ServerPlayNetworking.send(p, payload);
+		}
+	}
+}

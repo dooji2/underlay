@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "underlay",
+	"version": "${version}",
+	"name": "Underlay",
+	"description": "Place carpets (and more) under anything!",
+	"authors": [
+		"Dooji"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/underlay",
+		"sources": "https://github.com/dooji2/underlay"
+	},
+	"license": "GPL-v3",
+	"icon": "assets/underlay/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.dooji.underlay.Underlay"
+		],
+		"client": [
+			"com.dooji.underlay.UnderlayClient"
+		]
+	},
+	"mixins": [
+		"underlay.mixins.json",
+		{
+			"config": "underlay.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.14",
+		"minecraft": "~1.21",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

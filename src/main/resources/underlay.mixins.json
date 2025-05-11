@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.dooji.underlay.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"BlockItemMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
