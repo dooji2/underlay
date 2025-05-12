@@ -24,7 +24,7 @@ public class UnderlayRenderer {
     private static final long FULL_REFRESH_INTERVAL = 500;
 
     public static void init() {
-        WorldRenderEvents.AFTER_TRANSLUCENT.register(UnderlayRenderer::renderOverlays);
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlays);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
