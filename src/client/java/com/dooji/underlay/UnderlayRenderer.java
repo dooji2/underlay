@@ -1,5 +1,8 @@
 package com.dooji.underlay;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -11,6 +14,8 @@ import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.BlockRenderManager;
+import net.minecraft.client.render.model.BlockModelPart;
+import net.minecraft.client.render.model.BlockStateModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -104,8 +109,13 @@ public class UnderlayRenderer {
             matrices.push();
             matrices.translate(pos.getX(), pos.getY(), pos.getZ());
 
+            BlockStateModel model = blockRenderer.getModels().getModel(state);
+            List<BlockModelPart> parts = new ArrayList<>();
+            RANDOM.setSeed(state.getRenderingSeed(pos));
+            model.addParts(RANDOM, parts);
+
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
+            blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, parts);
 
             matrices.pop();
         }
