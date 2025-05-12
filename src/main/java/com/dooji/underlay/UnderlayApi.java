@@ -12,7 +12,8 @@ import net.minecraft.block.SlabBlock;
 import net.minecraft.block.AbstractRailBlock;
 
 public class UnderlayApi {
-	private static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
+	static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
+	static final Set<Block> CUSTOM_BLOCKS_DP = ConcurrentHashMap.newKeySet();
 
 	public static void registerOverlayBlock(Block block) {
 		if (block == null) {
@@ -20,6 +21,14 @@ public class UnderlayApi {
 		}
         
 		CUSTOM_BLOCKS.add(block);
+	}
+
+	static void registerDatapackOverlayBlock(Block block) {
+		if (block == null) {
+			return;
+		}
+
+		CUSTOM_BLOCKS_DP.add(block);
 	}
 
 	public static boolean isOverlayBlock(Block block) {
@@ -36,6 +45,6 @@ public class UnderlayApi {
 			return true;
 		}
         
-		return CUSTOM_BLOCKS.contains(block);
+		return CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block);
 	}
 }
