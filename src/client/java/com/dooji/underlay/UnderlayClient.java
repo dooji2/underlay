@@ -34,7 +34,7 @@ public class UnderlayClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (payload, context) -> {
 			MinecraftClient client = MinecraftClient.getInstance();
 			client.execute(() -> {
-				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
+				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
 					.collect(java.util.stream.Collectors.toMap(
 						Map.Entry::getKey,
@@ -51,7 +51,7 @@ public class UnderlayClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(AddOverlayPayload.ID, (payload, context) -> {
 			MinecraftClient client = MinecraftClient.getInstance();
 			client.execute(() -> {
-				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
+				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 
 				BlockPos pos = payload.pos();
 				BlockState state = NbtHelper.toBlockState(lookup, payload.stateTag());
@@ -92,7 +92,7 @@ public class UnderlayClient implements ClientModInitializer {
 		Vec3d eye = client.player.getCameraPosVec(1.0F);
 		Vec3d look = client.player.getRotationVec(1.0F);
 
-		double reach = client.player.getAttributeValue(EntityAttributes.PLAYER_BLOCK_INTERACTION_RANGE);
+		double reach = client.player.getAttributeValue(EntityAttributes.BLOCK_INTERACTION_RANGE);
 		int steps = (int) (reach * 8);
 
 		Vec3d step = look.multiply(reach / steps);

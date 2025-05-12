@@ -57,7 +57,7 @@ public class BlockItemMixin {
 			world.playSound(null, pos, sounds.getPlaceSound(), SoundCategory.BLOCKS, sounds.getVolume(), sounds.getPitch());
 		}
 
-		cir.setReturnValue(ActionResult.success(world.isClient()));
+		cir.setReturnValue(world.isClient() ? ActionResult.SUCCESS : ActionResult.SUCCESS_SERVER);
 		cir.cancel();
 	}
 }
