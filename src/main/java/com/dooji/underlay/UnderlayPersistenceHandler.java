@@ -105,17 +105,17 @@ public class UnderlayPersistenceHandler {
                 NbtCompound rootTag = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
                 
                 if (rootTag.contains("overlays")) {
-                    NbtList overlayList = rootTag.getList("overlays", 10);
+                    NbtList overlayList = rootTag.getListOrEmpty("overlays");
 
                     for (int i = 0; i < overlayList.size(); i++) {
-                        NbtCompound overlayTag = overlayList.getCompound(i);
+                        NbtCompound overlayTag = overlayList.getCompoundOrEmpty(i);
                         
-                        int x = overlayTag.getInt("x");
-                        int y = overlayTag.getInt("y");
-                        int z = overlayTag.getInt("z");
+                        int x = overlayTag.getInt("x", 0);
+                        int y = overlayTag.getInt("y", 0);
+                        int z = overlayTag.getInt("z", 0);
                         BlockPos pos = new BlockPos(x, y, z);
 
-                        String blockIdString = overlayTag.getString("block");
+                        String blockIdString = overlayTag.getString("block", "");
                         Identifier blockId = Identifier.tryParse(blockIdString);
 
                         if (blockId != null) {
