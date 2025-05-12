@@ -8,12 +8,13 @@ import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ItemScatterer;
@@ -21,10 +22,6 @@ import net.minecraft.util.math.BlockPos;
 
 public class UnderlayNetworking {
 	public static void init() {
-		PayloadTypeRegistry.playS2C().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
-		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
-
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			ServerPlayerEntity player = handler.getPlayer();
 			var world = player.getWorld();
@@ -35,13 +32,15 @@ public class UnderlayNetworking {
 			);
 
 			if (!tags.isEmpty()) {
-				ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
+				PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+				SyncOverlaysPayload.write(buf, new SyncOverlaysPayload(tags));
+				ServerPlayNetworking.send(player, SyncOverlaysPayload.ID, buf);
 			}
 		});
 
-		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
-			ServerPlayerEntity player = context.player();
+		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (server, player, handler, buf, responseSender) -> {
 			ServerWorld world = (ServerWorld) player.getWorld();
+			RemoveOverlayPayload payload = RemoveOverlayPayload.read(buf);
 			BlockPos pos = payload.pos();
 
 			if (UnderlayManager.hasOverlay(world, pos)) {
@@ -59,8 +58,12 @@ public class UnderlayNetworking {
 		var tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
 		var payload = new AddOverlayPayload(pos, tag);
 
+		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+		AddOverlayPayload.write(buf, payload);
+
 		for (ServerPlayerEntity p : world.getPlayers()) {
-			ServerPlayNetworking.send(p, payload);
+			PacketByteBuf copy = new PacketByteBuf(buf.copy());
+			ServerPlayNetworking.send(p, AddOverlayPayload.ID, copy);
 		}
 	}
 }
