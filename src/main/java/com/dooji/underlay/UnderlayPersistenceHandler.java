@@ -12,7 +12,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -102,8 +101,8 @@ public class UnderlayPersistenceHandler {
             }
 
             try (FileInputStream fis = new FileInputStream(saveFile)) {
-                NbtCompound rootTag = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
-                
+                NbtCompound rootTag = NbtIo.readCompressed(fis);
+
                 if (rootTag.contains("overlays")) {
                     NbtList overlayList = rootTag.getList("overlays", 10);
 

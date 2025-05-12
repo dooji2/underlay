@@ -2,6 +2,8 @@ package com.dooji.underlay;
 
 import java.util.Map;
 
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.PacketByteBuf;
 import org.lwjgl.glfw.GLFW;
 
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
@@ -16,7 +18,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
@@ -31,8 +32,9 @@ public class UnderlayClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 
-		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (payload, context) -> {
-			MinecraftClient client = MinecraftClient.getInstance();
+		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (client, handler, buf, responseSender) -> {
+			SyncOverlaysPayload payload = SyncOverlaysPayload.read(buf);
+
 			client.execute(() -> {
 				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
@@ -48,8 +50,9 @@ public class UnderlayClient implements ClientModInitializer {
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(AddOverlayPayload.ID, (payload, context) -> {
-			MinecraftClient client = MinecraftClient.getInstance();
+		ClientPlayNetworking.registerGlobalReceiver(AddOverlayPayload.ID, (client, handler, buf, responseSender) -> {
+			AddOverlayPayload payload = AddOverlayPayload.read(buf);
+
 			client.execute(() -> {
 				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
 
@@ -78,7 +81,14 @@ public class UnderlayClient implements ClientModInitializer {
 			BlockPos hit = findOverlayUnderCrosshair(client);
 			if (hit != null) {
 				var state = UnderlayManagerClient.getOverlay(hit);
-				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
+
+				RemoveOverlayPayload payload = new RemoveOverlayPayload(hit);
+				PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+				RemoveOverlayPayload.write(buf, payload);
+
+				PacketByteBuf copy = new PacketByteBuf(buf.copy());
+				ClientPlayNetworking.send(RemoveOverlayPayload.ID, copy);
+
 				UnderlayRenderer.unregisterOverlay(hit);
 				UnderlayManagerClient.syncRemove(hit);
 				client.world.playSound(client.player, hit, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
@@ -92,7 +102,8 @@ public class UnderlayClient implements ClientModInitializer {
 		Vec3d eye = client.player.getCameraPosVec(1.0F);
 		Vec3d look = client.player.getRotationVec(1.0F);
 
-		double reach = client.player.getAttributeValue(EntityAttributes.PLAYER_BLOCK_INTERACTION_RANGE);
+        assert client.interactionManager != null;
+        double reach = client.interactionManager.getReachDistance();
 		int steps = (int) (reach * 8);
 
 		Vec3d step = look.multiply(reach / steps);
