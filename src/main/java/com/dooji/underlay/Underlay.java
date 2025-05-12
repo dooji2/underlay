@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.block.Block;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -44,12 +43,9 @@ public class Underlay implements ModInitializer {
 
 	private static void reloadDatapackBlocks(ServerWorld world) {
 		UnderlayApi.CUSTOM_BLOCKS_DP.clear();
-		var blocks = world.getRegistryManager().get(RegistryKeys.BLOCK);
+		var blocks = world.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 
-		blocks.getEntryList(OVERLAY_TAG).ifPresent(list -> {
-			list.stream()
-				.map(RegistryEntry::value)
-				.forEach(UnderlayApi::registerDatapackOverlayBlock);
-		});
+		blocks.iterateEntries(OVERLAY_TAG)
+			.forEach(entry -> UnderlayApi.registerDatapackOverlayBlock(entry.value()));
 	}
 }
