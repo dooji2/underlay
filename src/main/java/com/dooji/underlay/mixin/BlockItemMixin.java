@@ -29,14 +29,19 @@ public class BlockItemMixin {
 	private void handleOverlayPlacement(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
 		BlockItem self = (BlockItem)(Object)this;
 		Block block = self.getBlock();
-		
-		if (!UnderlayApi.isOverlayBlock(block)) {
-			return;
-		}
 
 		BlockPos pos = context.getBlockPos();
 		World world = context.getWorld();
 		BlockState existing = world.getBlockState(pos);
+		BlockState newState  = block.getPlacementState(context);
+
+		if (newState != null && existing.getBlock() == block && newState.getBlock() == block) {
+			return;
+		}
+		
+		if (!UnderlayApi.isOverlayBlock(block)) {
+			return;
+		}
 
 		if (existing.isAir() || Block.isShapeFullCube(existing.getOutlineShape(world, pos)) || context.getSide() != Direction.UP) {
 			return;
