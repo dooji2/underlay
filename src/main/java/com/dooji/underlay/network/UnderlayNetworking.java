@@ -45,7 +45,7 @@ public class UnderlayNetworking {
 			ServerWorld world = (ServerWorld) player.getWorld();
 			BlockPos pos = payload.pos();
 
-			if (!world.canPlayerModifyAt(player, pos)) {
+			if (!world.canEntityModifyAt(player, pos)) {
 				return;
 			}
 

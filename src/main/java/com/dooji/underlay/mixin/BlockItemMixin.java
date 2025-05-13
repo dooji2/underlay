@@ -55,7 +55,7 @@ public class BlockItemMixin {
 			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), world, pos, overlay);
 			PlayerEntity player = context.getPlayer();
 
-			if (!((ServerWorld)world).canPlayerModifyAt(player, pos)) {
+			if (!((ServerWorld)world).canEntityModifyAt(player, pos)) {
                 cir.setReturnValue(ActionResult.FAIL);
                 cir.cancel();
 
