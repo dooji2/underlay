@@ -61,6 +61,18 @@ public class UnderlayClient implements ClientModInitializer {
 			});
 		});
 
+		ClientPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
+			MinecraftClient client = MinecraftClient.getInstance();
+			client.execute(() -> {
+				BlockPos pos = payload.pos();
+				var state = UnderlayManagerClient.getOverlay(pos);
+
+				UnderlayRenderer.unregisterOverlay(pos);
+				UnderlayManagerClient.syncRemove(pos);
+				client.world.playSound(client.player, pos, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
+			});
+		});
+
 		UnderlayRenderer.init();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
 			UnderlayRenderer.clearAllOverlays();
@@ -77,11 +89,7 @@ public class UnderlayClient implements ClientModInitializer {
 		if (sneaking && rightDown && !wasRightDown) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
 			if (hit != null) {
-				var state = UnderlayManagerClient.getOverlay(hit);
 				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
-				UnderlayRenderer.unregisterOverlay(hit);
-				UnderlayManagerClient.syncRemove(hit);
-				client.world.playSound(client.player, hit, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
 			}
 		}
 
