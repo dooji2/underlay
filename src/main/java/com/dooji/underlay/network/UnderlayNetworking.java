@@ -43,6 +43,10 @@ public class UnderlayNetworking {
 			RemoveOverlayPayload payload = RemoveOverlayPayload.read(buf);
 			BlockPos pos = payload.pos();
 
+			if (!world.canPlayerModifyAt(player, pos)) {
+				return;
+			}
+
 			if (UnderlayManager.hasOverlay(world, pos)) {
 				var old = UnderlayManager.getOverlay(world, pos);
 				UnderlayManager.removeOverlay(world, pos);
@@ -50,6 +54,8 @@ public class UnderlayNetworking {
 				if (!player.isCreative()) {
 					ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
 				}
+
+				broadcastRemove(world, pos);
 			}
 		});
 	}
@@ -64,6 +70,16 @@ public class UnderlayNetworking {
 		for (ServerPlayerEntity p : world.getPlayers()) {
 			PacketByteBuf copy = new PacketByteBuf(buf.copy());
 			ServerPlayNetworking.send(p, AddOverlayPayload.ID, copy);
+		}
+	}
+
+	private static void broadcastRemove(ServerWorld world, BlockPos pos) {
+		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+		RemoveOverlayPayload.write(buf, new RemoveOverlayPayload(pos));
+
+		for (ServerPlayerEntity p : world.getPlayers()) {
+			PacketByteBuf copy = new PacketByteBuf(buf.copy());
+			ServerPlayNetworking.send(p, RemoveOverlayPayload.ID, copy);
 		}
 	}
 }

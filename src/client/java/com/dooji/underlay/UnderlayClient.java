@@ -64,6 +64,18 @@ public class UnderlayClient implements ClientModInitializer {
 			});
 		});
 
+		ClientPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (client, handler, buf, responseSender) -> {
+			RemoveOverlayPayload payload = RemoveOverlayPayload.read(buf);
+			client.execute(() -> {
+				BlockPos pos = payload.pos();
+				var state = UnderlayManagerClient.getOverlay(pos);
+
+				UnderlayRenderer.unregisterOverlay(pos);
+				UnderlayManagerClient.syncRemove(pos);
+				client.world.playSound(client.player, pos, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
+			});
+		});
+
 		UnderlayRenderer.init();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
 			UnderlayRenderer.clearAllOverlays();
@@ -88,10 +100,6 @@ public class UnderlayClient implements ClientModInitializer {
 
 				PacketByteBuf copy = new PacketByteBuf(buf.copy());
 				ClientPlayNetworking.send(RemoveOverlayPayload.ID, copy);
-
-				UnderlayRenderer.unregisterOverlay(hit);
-				UnderlayManagerClient.syncRemove(hit);
-				client.world.playSound(client.player, hit, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
 			}
 		}
 
