@@ -24,6 +24,7 @@ public class UnderlayNetworking {
 		PayloadTypeRegistry.playS2C().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			ServerPlayerEntity player = handler.getPlayer();
@@ -44,6 +45,10 @@ public class UnderlayNetworking {
 			ServerWorld world = (ServerWorld) player.getWorld();
 			BlockPos pos = payload.pos();
 
+			if (!world.canPlayerModifyAt(player, pos)) {
+				return;
+			}
+
 			if (UnderlayManager.hasOverlay(world, pos)) {
 				var old = UnderlayManager.getOverlay(world, pos);
 				UnderlayManager.removeOverlay(world, pos);
@@ -51,6 +56,8 @@ public class UnderlayNetworking {
 				if (!player.isCreative()) {
 					ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
 				}
+
+				broadcastRemove(world, pos);
 			}
 		});
 	}
@@ -58,6 +65,14 @@ public class UnderlayNetworking {
 	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
 		var tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
 		var payload = new AddOverlayPayload(pos, tag);
+
+		for (ServerPlayerEntity p : world.getPlayers()) {
+			ServerPlayNetworking.send(p, payload);
+		}
+	}
+
+	private static void broadcastRemove(ServerWorld world, BlockPos pos) {
+		var payload = new RemoveOverlayPayload(pos);
 
 		for (ServerPlayerEntity p : world.getPlayers()) {
 			ServerPlayNetworking.send(p, payload);
