@@ -11,8 +11,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 public record SyncOverlaysPayload(Map<BlockPos, NbtCompound> tags) implements CustomPayload {
-    public static final CustomPayload.Id<SyncOverlaysPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "sync_overlays"));
+    public static final CustomPayload.Id<SyncOverlaysPayload> ID = new CustomPayload.Id<>(Identifier.of("underlay", "sync_overlays"));
 
     public static final PacketCodec<PacketByteBuf, SyncOverlaysPayload> CODEC = PacketCodec.ofStatic(
         (buf, payload) -> {

@@ -8,8 +8,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 public record AddOverlayPayload(BlockPos pos, NbtCompound stateTag) implements CustomPayload {
-    public static final CustomPayload.Id<AddOverlayPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "add_overlay"));
+    public static final CustomPayload.Id<AddOverlayPayload> ID = new CustomPayload.Id<>(Identifier.of("underlay", "add_overlay"));
 
     public static final PacketCodec<PacketByteBuf, AddOverlayPayload> CODEC = PacketCodec.ofStatic(
         (buf, payload) -> {

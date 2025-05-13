@@ -7,8 +7,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 public record RemoveOverlayPayload(BlockPos pos) implements CustomPayload {
-    public static final CustomPayload.Id<RemoveOverlayPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "remove_overlay"));
+    public static final CustomPayload.Id<RemoveOverlayPayload> ID = new CustomPayload.Id<>(Identifier.of("underlay", "remove_overlay"));
 
     public static final PacketCodec<PacketByteBuf, RemoveOverlayPayload> CODEC =
         PacketCodec.tuple(
