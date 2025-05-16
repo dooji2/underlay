@@ -21,16 +21,16 @@ public class MinecraftClientMixin {
     
     @Inject(method = "tick", at = @At("TAIL"))
     private void overlayCrosshair(CallbackInfo ci) {
-        MinecraftClient minecraft = MinecraftClient.getInstance();
+        MinecraftClient client = MinecraftClient.getInstance();
         HitResult originalTarget = this.crosshairTarget;
-        PlayerEntity player = minecraft.player;
+        PlayerEntity player = client.player;
 
         if (player == null) {
             this.crosshairTarget = originalTarget;
             return;
         }
 
-        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), 1.0f);
+        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), client.getRenderTickCounter().getTickDelta(true));
         HitResult chosenTarget = originalTarget;
 
         if (overlayHit != null) {
