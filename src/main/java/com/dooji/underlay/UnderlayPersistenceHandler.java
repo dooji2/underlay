@@ -8,11 +8,15 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryEntryLookup;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
@@ -46,6 +50,7 @@ public class UnderlayPersistenceHandler {
                     overlayTag.putInt("x", pos.getX());
                     overlayTag.putInt("y", pos.getY());
                     overlayTag.putInt("z", pos.getZ());
+                    overlayTag.put("state", NbtHelper.fromBlockState(state));
 
                     Identifier blockId = Registries.BLOCK.getId(state.getBlock());
                     overlayTag.putString("block", blockId.toString());
@@ -92,6 +97,8 @@ public class UnderlayPersistenceHandler {
 
         try {
             ServerWorld serverWorld = (ServerWorld) world;
+            RegistryEntryLookup<Block> lookup = serverWorld.getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
+            
             Path saveDir = serverWorld.getServer().getSavePath(WorldSavePath.ROOT).resolve("data");
             File saveFile = saveDir.resolve(SAVE_FILE_NAME).toFile();
             
@@ -102,7 +109,7 @@ public class UnderlayPersistenceHandler {
 
             try (FileInputStream fis = new FileInputStream(saveFile)) {
                 NbtCompound rootTag = NbtIo.readCompressed(fis);
-
+                
                 if (rootTag.contains("overlays")) {
                     NbtList overlayList = rootTag.getList("overlays", 10);
 
@@ -112,17 +119,25 @@ public class UnderlayPersistenceHandler {
                         int x = overlayTag.getInt("x");
                         int y = overlayTag.getInt("y");
                         int z = overlayTag.getInt("z");
+                        NbtCompound stateTag = overlayTag.getCompound("state");
                         BlockPos pos = new BlockPos(x, y, z);
+                        BlockState state;
 
-                        String blockIdString = overlayTag.getString("block");
-                        Identifier blockId = Identifier.tryParse(blockIdString);
-
-                        if (blockId != null) {
-                            BlockState state = Registries.BLOCK.get(blockId).getDefaultState();
-                            overlays.put(pos, state);
+                        if (!stateTag.isEmpty()) {
+                            state = NbtHelper.toBlockState(lookup, stateTag);
                         } else {
-                            Underlay.LOGGER.warn("Invalid block ID in overlay save: " + blockIdString);
+                            String blockIdString = overlayTag.getString("block");
+                            Identifier blockId = Identifier.tryParse(blockIdString);
+
+                            if (blockId != null) {
+                                state = Registries.BLOCK.get(blockId).getDefaultState();
+                            } else {
+                                Underlay.LOGGER.warn("Invalid block ID in overlay save: " + blockIdString);
+                                continue;
+                            }
                         }
+
+                        overlays.put(pos, state);
                     }
 
                     Underlay.LOGGER.info("Loaded " + overlays.size() + " overlays");
