@@ -21,6 +21,7 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -96,24 +97,21 @@ public class UnderlayClient implements ClientModInitializer {
 		wasRightDown = rightDown;
 	}
 
-	private BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
-		Vec3d eye = client.player.getCameraPosVec(1.0F);
-		Vec3d look = client.player.getRotationVec(1.0F);
+	public static boolean isLookingDirectlyAtOverlay(MinecraftClient client) {
+		if (!(client.crosshairTarget instanceof BlockHitResult hit) || client.player == null) return false;
 
-		double reach = client.player.getAttributeValue(EntityAttributes.BLOCK_INTERACTION_RANGE);
-		int steps = (int) (reach * 8);
+		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+		return overlayHit != null && overlayHit.getBlockPos().equals(hit.getBlockPos());
+	}
 
-		Vec3d step = look.multiply(reach / steps);
-		Vec3d pos = eye;
+	public static BlockPos getDirectlyTargetedOverlay(MinecraftClient client) {
+		return isLookingDirectlyAtOverlay(client) ? ((BlockHitResult)client.crosshairTarget).getBlockPos() : null;
+	}
 
-		for (int i = 0; i < steps; i++) {
-			pos = pos.add(step);
-			BlockPos blockPos = BlockPos.ofFloored(pos.x, pos.y, pos.z);
+	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
+		if (client.player == null) return null;
 
-			if (UnderlayManagerClient.hasOverlay(blockPos)) {
-				return blockPos;
-			}
-		}
-		return null;
+		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+		return overlayHit == null ? null : overlayHit.getBlockPos();
 	}
 }
