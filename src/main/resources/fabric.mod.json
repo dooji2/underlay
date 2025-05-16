@@ -20,12 +20,19 @@
 		],
 		"client": [
 			"com.dooji.underlay.UnderlayClient"
+		],
+		"jade": [
+			"com.dooji.underlay.jade.UnderlayJadePlugin"
 		]
 	},
 	"mixins": [
 		"underlay.mixins.json",
 		{
 			"config": "underlay.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "underlay.client.jade.mixins.json",
 			"environment": "client"
 		}
 	],
