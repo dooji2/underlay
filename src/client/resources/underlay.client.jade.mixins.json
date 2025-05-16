@@ -1,0 +1,13 @@
+{
+	"required": false,
+	"package": "com.dooji.underlay.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"BlockAccessorImplMixin",
+		"JadeRayTracingMixin",
+		"MinecraftClientMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
