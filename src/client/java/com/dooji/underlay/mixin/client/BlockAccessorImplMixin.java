@@ -5,14 +5,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.dooji.underlay.UnderlayClient;
 import com.dooji.underlay.UnderlayManagerClient;
+import com.dooji.underlay.UnderlayRaycast;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import snownee.jade.impl.BlockAccessorImpl;
 
@@ -25,9 +26,12 @@ public class BlockAccessorImplMixin {
         BlockPos pos = self.getPosition();
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (UnderlayClient.isLookingDirectlyAtOverlay(client) && pos.equals(UnderlayClient.getDirectlyTargetedOverlay(client))) {
-            BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
-            if (overlayState != null) cir.setReturnValue(overlayState);
+        if (client.player != null) {
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+            if (hit != null && hit.getBlockPos().equals(pos)) {
+                BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
+                if (overlayState != null) cir.setReturnValue(overlayState);
+            }
         }
     }
 
@@ -37,9 +41,12 @@ public class BlockAccessorImplMixin {
         BlockPos pos = self.getPosition();
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (UnderlayClient.isLookingDirectlyAtOverlay(client) && pos.equals(UnderlayClient.getDirectlyTargetedOverlay(client))) {
-            BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
-            if (overlayState != null) cir.setReturnValue(overlayState.getBlock());
+        if (client.player != null) {
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+            if (hit != null && hit.getBlockPos().equals(pos)) {
+                BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
+                if (overlayState != null) cir.setReturnValue(overlayState.getBlock());
+            }
         }
     }
 
@@ -49,12 +56,11 @@ public class BlockAccessorImplMixin {
         BlockPos pos = self.getPosition();
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (UnderlayClient.isLookingDirectlyAtOverlay(client) && pos.equals(UnderlayClient.getDirectlyTargetedOverlay(client))) {
-            BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
-            if (overlayState != null) {
-                Block overlayBlock = overlayState.getBlock();
-                ItemStack overlayItem = new ItemStack(overlayBlock.asItem());
-                cir.setReturnValue(overlayItem);
+        if (client.player != null) {
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+            if (hit != null && hit.getBlockPos().equals(pos)) {
+                BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
+                if (overlayState != null) cir.setReturnValue(new ItemStack(overlayState.getBlock().asItem()));
             }
         }
     }
@@ -65,14 +71,12 @@ public class BlockAccessorImplMixin {
         BlockPos pos = self.getPosition();
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (UnderlayClient.isLookingDirectlyAtOverlay(client) && pos.equals(UnderlayClient.getDirectlyTargetedOverlay(client))) {
-            BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
-            if (overlayState != null) {
-                Block overlayBlock = overlayState.getBlock();
-
-                if (overlayBlock.asItem() instanceof BlockItem) {
-                    ItemStack overlayItem = new ItemStack(overlayBlock.asItem());
-                    cir.setReturnValue(overlayItem);
+        if (client.player != null) {
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+            if (hit != null && hit.getBlockPos().equals(pos)) {
+                BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
+                if (overlayState != null && overlayState.getBlock().asItem() instanceof BlockItem) {
+                    cir.setReturnValue(new ItemStack(overlayState.getBlock().asItem()));
                 }
             }
         }

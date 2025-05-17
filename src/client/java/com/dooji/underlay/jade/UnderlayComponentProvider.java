@@ -1,11 +1,12 @@
 package com.dooji.underlay.jade;
 
 import com.dooji.underlay.Underlay;
-import com.dooji.underlay.UnderlayClient;
+import com.dooji.underlay.UnderlayRaycast;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
@@ -30,7 +31,8 @@ public enum UnderlayComponentProvider implements IBlockComponentProvider {
         BlockPos pos = accessor.getPosition();
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (UnderlayClient.isLookingDirectlyAtOverlay(client) && pos.equals(UnderlayClient.getDirectlyTargetedOverlay(client))) {
+        BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+        if (hit != null && hit.getBlockPos().equals(pos)) {
             tooltip.append(Text.translatable("block.underlay.overlay"));
         }
     }
