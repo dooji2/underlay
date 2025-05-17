@@ -75,6 +75,7 @@ public class UnderlayClient implements ClientModInitializer {
 		UnderlayRenderer.init();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
 			UnderlayRenderer.clearAllOverlays();
+			UnderlayManagerClient.removeAll();
 		});
 	}
 
