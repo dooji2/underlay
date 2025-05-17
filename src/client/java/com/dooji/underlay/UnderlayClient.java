@@ -16,14 +16,12 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 
 public class UnderlayClient implements ClientModInitializer {
 	private boolean wasRightDown = false;
@@ -77,6 +75,7 @@ public class UnderlayClient implements ClientModInitializer {
 		UnderlayRenderer.init();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
 			UnderlayRenderer.clearAllOverlays();
+			UnderlayManagerClient.removeAll();
 		});
 	}
 
@@ -95,17 +94,6 @@ public class UnderlayClient implements ClientModInitializer {
 		}
 
 		wasRightDown = rightDown;
-	}
-
-	public static boolean isLookingDirectlyAtOverlay(MinecraftClient client) {
-		if (!(client.crosshairTarget instanceof BlockHitResult hit) || client.player == null) return false;
-
-		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
-		return overlayHit != null && overlayHit.getBlockPos().equals(hit.getBlockPos());
-	}
-
-	public static BlockPos getDirectlyTargetedOverlay(MinecraftClient client) {
-		return isLookingDirectlyAtOverlay(client) ? ((BlockHitResult)client.crosshairTarget).getBlockPos() : null;
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
