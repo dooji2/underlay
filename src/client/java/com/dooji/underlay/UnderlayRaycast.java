@@ -26,7 +26,7 @@ public class UnderlayRaycast {
         for (BlockPos pos : UnderlayManagerClient.getAll().keySet()) {
             if (pos.getSquaredDistance(eye) > reach * reach) continue;
 
-            BlockState state = UnderlayManagerClient.getOverlay(pos).getBlock().getDefaultState();
+            BlockState state = UnderlayManagerClient.getOverlay(pos);
             VoxelShape shape = state.getOutlineShape(client.world, pos, ShapeContext.of((PlayerEntity)viewer));
 
             BlockHitResult hit = shape.raycast(eye, end, pos);
