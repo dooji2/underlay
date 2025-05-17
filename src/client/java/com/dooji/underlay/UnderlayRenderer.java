@@ -82,7 +82,6 @@ public class UnderlayRenderer {
         checkForFullRefresh();
 
         matrices.push();
-        matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 
         for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
             BlockPos pos = entry.getKey();
@@ -102,7 +101,7 @@ public class UnderlayRenderer {
             }
 
             matrices.push();
-            matrices.translate(pos.getX(), pos.getY(), pos.getZ());
+            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
             blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
