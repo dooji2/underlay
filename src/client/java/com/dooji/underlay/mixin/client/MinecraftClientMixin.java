@@ -34,7 +34,7 @@ public class MinecraftClientMixin {
         HitResult chosenTarget = originalTarget;
 
         if (overlayHit != null) {
-            Vec3d eye = player.getCameraPosVec(1.0f);
+            Vec3d eye = player.getCameraPosVec(client.getRenderTickCounter().getTickDelta(true));
             double overlayDistanceSq = overlayHit.getPos().squaredDistanceTo(eye);
             double originalDistanceSq = (originalTarget == null) ? Double.MAX_VALUE : originalTarget.getPos().squaredDistanceTo(eye);
 
