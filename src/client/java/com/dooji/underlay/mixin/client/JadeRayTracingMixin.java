@@ -22,7 +22,7 @@ public class JadeRayTracingMixin {
         Vec3d eye = entity.getCameraPosVec((float)tickDelta);
         
         double originalDistanceSq = (originalHit == null) ? Double.MAX_VALUE : originalHit.getPos().squaredDistanceTo(eye);
-        BlockHitResult overlayHit = UnderlayRaycast.trace(entity, reach, (float)1.0f);
+        BlockHitResult overlayHit = UnderlayRaycast.trace(entity, reach, (float)tickDelta);
         if (overlayHit == null) return;
 
         boolean sameBlockPos = originalHit instanceof BlockHitResult originalBlockHit && originalBlockHit.getBlockPos().equals(overlayHit.getBlockPos());
