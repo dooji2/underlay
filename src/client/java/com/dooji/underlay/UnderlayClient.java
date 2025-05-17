@@ -75,6 +75,7 @@ public class UnderlayClient implements ClientModInitializer {
 		UnderlayRenderer.init();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
 			UnderlayRenderer.clearAllOverlays();
+			UnderlayManagerClient.removeAll();
 		});
 	}
 
@@ -93,17 +94,6 @@ public class UnderlayClient implements ClientModInitializer {
 		}
 
 		wasRightDown = rightDown;
-	}
-
-	public static boolean isLookingDirectlyAtOverlay(MinecraftClient client) {
-		if (!(client.crosshairTarget instanceof BlockHitResult hit) || client.player == null) return false;
-
-		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickDelta(true));
-		return overlayHit != null && overlayHit.getBlockPos().equals(hit.getBlockPos());
-	}
-
-	public static BlockPos getDirectlyTargetedOverlay(MinecraftClient client) {
-		return isLookingDirectlyAtOverlay(client) ? ((BlockHitResult)client.crosshairTarget).getBlockPos() : null;
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {

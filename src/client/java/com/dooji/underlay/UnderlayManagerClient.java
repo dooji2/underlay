@@ -35,4 +35,8 @@ public class UnderlayManagerClient {
     public static Map<BlockPos, BlockState> getAll() {
         return OVERLAYS;
     }
+
+    public static void removeAll() {
+        OVERLAYS.clear();
+    }
 }
