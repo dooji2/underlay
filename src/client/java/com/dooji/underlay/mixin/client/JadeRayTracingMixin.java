@@ -23,7 +23,7 @@ public class JadeRayTracingMixin {
         Vec3d eye = entity.getCameraPosVec((MinecraftClient.getInstance().getTickDelta()));
         
         double originalDistanceSq = (originalHit == null) ? Double.MAX_VALUE : originalHit.getPos().squaredDistanceTo(eye);
-        BlockHitResult overlayHit = UnderlayRaycast.trace(entity, reach, 1.0f);
+        BlockHitResult overlayHit = UnderlayRaycast.trace(entity, reach, MinecraftClient.getInstance().getTickDelta());
         if (overlayHit == null) return;
 
         boolean sameBlockPos = originalHit instanceof BlockHitResult originalBlockHit && originalBlockHit.getBlockPos().equals(overlayHit.getBlockPos());
