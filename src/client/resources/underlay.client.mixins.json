@@ -1,9 +1,0 @@
-{
-	"required": true,
-	"package": "com.dooji.underlay.mixin.client",
-	"compatibilityLevel": "JAVA_17",
-	"client": [],
-	"injectors": {
-		"defaultRequire": 1
-	}
-}
