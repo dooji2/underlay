@@ -26,7 +26,9 @@ public class Underlay {
     private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "overlay"));
     private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "exclude"));
 
-    public Underlay(IEventBus modEventBus) {
+    public Underlay() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
     }
