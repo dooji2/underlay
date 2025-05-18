@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class UnderlayNetworking {
     private static final String PROTOCOL_VERSION = "1";
-    public static final ResourceLocation NETWORK_CHANNEL = ResourceLocation.fromNamespaceAndPath(Underlay.MOD_ID, "main");
+    public static final ResourceLocation NETWORK_CHANNEL = ResourceLocation.tryBuild(Underlay.MOD_ID, "main");
     public static SimpleChannel INSTANCE;
 
     public static void init() {

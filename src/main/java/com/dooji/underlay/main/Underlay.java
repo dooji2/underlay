@@ -23,13 +23,11 @@ public class Underlay {
     public static final String MOD_ID = "underlay";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "overlay"));
-    private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "exclude"));
+    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "overlay"));
+    private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "exclude"));
 
-    public Underlay(FMLJavaModLoadingContext context) {
-        IEventBus modEventBus = context.getModEventBus();
+    public Underlay(IEventBus modEventBus) {
         modEventBus.addListener(this::commonSetup);
-
         MinecraftForge.EVENT_BUS.register(this);
     }
 
