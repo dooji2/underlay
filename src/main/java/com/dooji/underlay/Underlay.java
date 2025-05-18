@@ -19,11 +19,12 @@ public class Underlay implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static final TagKey<Block> OVERLAY_TAG = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID, "overlay"));
+	private static final TagKey<Block> EXCLUDE_TAG = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID, "exclude"));
 
 	@Override
 	public void onInitialize() {
 		UnderlayNetworking.init();
-		
+
 		ServerWorldEvents.LOAD.register((server, world) -> {
 			LOGGER.info("Loading overlays for world: " + world.getRegistryKey().getValue());
 			UnderlayManager.loadOverlays(world);
@@ -45,7 +46,10 @@ public class Underlay implements ModInitializer {
 		UnderlayApi.CUSTOM_BLOCKS_DP.clear();
 		var blocks = world.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 
-		blocks.iterateEntries(OVERLAY_TAG)
-			.forEach(entry -> UnderlayApi.registerDatapackOverlayBlock(entry.value()));
+		for (var entry : blocks.iterateEntries(OVERLAY_TAG)) {
+			if (!entry.isIn(EXCLUDE_TAG)) {
+				UnderlayApi.registerDatapackOverlayBlock(entry.value());
+			}
+		}
 	}
 }
