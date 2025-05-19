@@ -2,6 +2,7 @@ package com.dooji.underlay;
 
 import java.util.Map;
 
+import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import org.lwjgl.glfw.GLFW;
 
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
@@ -83,13 +84,13 @@ public class UnderlayClient implements ClientModInitializer {
 		if (client.player == null || client.world == null) return;
 		if (client.currentScreen != null) return;
 
-		long window = client.getWindow().getHandle();
-		boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-
+		boolean leftDown = client.options.attackKey.isPressed();
 		if (leftDown && !wasLeftDown) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
 			if (hit != null) {
 				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
+				ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+				playerInteraction.setBlockBreakingCooldown(5);
 			}
 		}
 

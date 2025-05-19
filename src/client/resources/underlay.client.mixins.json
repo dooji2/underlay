@@ -2,7 +2,9 @@
 	"required": true,
 	"package": "com.dooji.underlay.mixin.client",
 	"compatibilityLevel": "JAVA_21",
-	"client": [],
+	"client": [
+      "ClientPlayerInteractionManagerAccessor"
+    ],
 	"injectors": {
 		"defaultRequire": 1
 	}
