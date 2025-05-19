@@ -81,6 +81,7 @@ public class UnderlayClient implements ClientModInitializer {
 
 	private void onClientTick(MinecraftClient client) {
 		if (client.player == null || client.world == null) return;
+		if (client.currentScreen != null) return;
 
 		long window = client.getWindow().getHandle();
 		boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
