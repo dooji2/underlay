@@ -1,5 +1,6 @@
 package com.dooji.underlay.mixin.client;
 
+import com.dooji.underlay.UnderlayClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -43,5 +44,16 @@ public class MinecraftClientMixin {
         }
 
         this.crosshairTarget = chosenTarget;
+    }
+
+    @Inject(method = "doAttack", at = @At("HEAD"), cancellable = true)
+    private void onLeftClick(CallbackInfoReturnable<Boolean> cir) {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
+        if (overlayPos != null) {
+            cir.setReturnValue(false);
+            cir.cancel();
+        }
     }
 }

@@ -24,7 +24,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
 public class UnderlayClient implements ClientModInitializer {
-	private boolean wasRightDown = false;
+	private boolean wasLeftDown = false;
 
 	@Override
 	public void onInitializeClient() {
@@ -83,17 +83,16 @@ public class UnderlayClient implements ClientModInitializer {
 		if (client.player == null || client.world == null) return;
 
 		long window = client.getWindow().getHandle();
-		boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-		boolean sneaking = client.player.isSneaking();
+		boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
 
-		if (sneaking && rightDown && !wasRightDown) {
+		if (leftDown && !wasLeftDown) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
 			if (hit != null) {
 				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
 			}
 		}
 
-		wasRightDown = rightDown;
+		wasLeftDown = leftDown;
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
