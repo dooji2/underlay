@@ -81,19 +81,25 @@ public class UnderlayClient implements ClientModInitializer {
 
 	private void onClientTick(MinecraftClient client) {
 		if (client.player == null || client.world == null) return;
+		if (client.currentScreen != null) return;
 
-		long window = client.getWindow().getHandle();
-		boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-		boolean sneaking = client.player.isSneaking();
+		handleContinuousBreaking(client);
+	}
 
-		if (sneaking && rightDown && !wasRightDown) {
+	private void handleContinuousBreaking(MinecraftClient client) {
+		if (client.options.attackKey.isPressed()) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
-			if (hit != null) {
-				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
+			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+			if (hit != null && playerInteraction.getBlockBreakingCooldown() == 0) {
+				breakOverlay(client, hit);
 			}
 		}
+	}
 
-		wasRightDown = rightDown;
+	public static void breakOverlay(MinecraftClient client, BlockPos pos) {
+		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+		ClientPlayNetworking.send(new RemoveOverlayPayload(pos));
+		interactionManager.setBlockBreakingCooldown(5);
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
