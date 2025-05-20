@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.network.PacketByteBuf;
 import org.lwjgl.glfw.GLFW;
 
+import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
@@ -26,8 +27,6 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
 public class UnderlayClient implements ClientModInitializer {
-	private boolean wasRightDown = false;
-
 	@Override
 	public void onInitializeClient() {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
@@ -85,24 +84,30 @@ public class UnderlayClient implements ClientModInitializer {
 
 	private void onClientTick(MinecraftClient client) {
 		if (client.player == null || client.world == null) return;
+		if (client.currentScreen != null) return;
 
-		long window = client.getWindow().getHandle();
-		boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-		boolean sneaking = client.player.isSneaking();
+		handleContinuousBreaking(client);
+	}
 
-		if (sneaking && rightDown && !wasRightDown) {
+	private void handleContinuousBreaking(MinecraftClient client) {
+		if (client.options.attackKey.isPressed()) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
-			if (hit != null) {
-				RemoveOverlayPayload payload = new RemoveOverlayPayload(hit);
-				PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-				RemoveOverlayPayload.write(buf, payload);
-
-				PacketByteBuf copy = new PacketByteBuf(buf.copy());
-				ClientPlayNetworking.send(RemoveOverlayPayload.ID, copy);
+			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+			if (hit != null && playerInteraction.getBlockBreakingCooldown() == 0) {
+				breakOverlay(client, hit);
 			}
 		}
+	}
 
-		wasRightDown = rightDown;
+	public static void breakOverlay(MinecraftClient client, BlockPos pos) {
+		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+		RemoveOverlayPayload payload = new RemoveOverlayPayload(pos);
+		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+		RemoveOverlayPayload.write(buf, payload);
+
+		PacketByteBuf copy = new PacketByteBuf(buf.copy());
+		ClientPlayNetworking.send(RemoveOverlayPayload.ID, copy);
+		interactionManager.setBlockBreakingCooldown(5);
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
