@@ -24,7 +24,6 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
 public class UnderlayClient implements ClientModInitializer {
-
 	@Override
 	public void onInitializeClient() {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
