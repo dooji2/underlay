@@ -82,10 +82,10 @@ public class UnderlayClient implements ClientModInitializer {
 		if (client.player == null || client.world == null) return;
 		if (client.currentScreen != null) return;
 
-		handleContinousBreaking(client);
+		handleContinuousBreaking(client);
 	}
 
-	private void handleContinousBreaking(MinecraftClient client) {
+	private void handleContinuousBreaking(MinecraftClient client) {
 		if (client.options.attackKey.isPressed()) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
 			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
