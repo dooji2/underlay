@@ -3,7 +3,6 @@ package com.dooji.underlay;
 import java.util.Map;
 
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
-import org.lwjgl.glfw.GLFW;
 
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
@@ -25,7 +24,6 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
 public class UnderlayClient implements ClientModInitializer {
-	private boolean wasLeftDown = false;
 
 	@Override
 	public void onInitializeClient() {
@@ -84,17 +82,23 @@ public class UnderlayClient implements ClientModInitializer {
 		if (client.player == null || client.world == null) return;
 		if (client.currentScreen != null) return;
 
-		boolean leftDown = client.options.attackKey.isPressed();
-		if (leftDown && !wasLeftDown) {
+		handleContinousBreaking(client);
+	}
+
+	private void handleContinousBreaking(MinecraftClient client) {
+		if (client.options.attackKey.isPressed()) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
-			if (hit != null) {
-				ClientPlayNetworking.send(new RemoveOverlayPayload(hit));
-				ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
-				playerInteraction.setBlockBreakingCooldown(5);
+			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+			if (hit != null && playerInteraction.getBlockBreakingCooldown() == 0) {
+				breakOverlay(client, hit);
 			}
 		}
+	}
 
-		wasLeftDown = leftDown;
+	public static void breakOverlay(MinecraftClient client, BlockPos pos) {
+		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+		ClientPlayNetworking.send(new RemoveOverlayPayload(pos));
+		interactionManager.setBlockBreakingCooldown(5);
 	}
 
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {

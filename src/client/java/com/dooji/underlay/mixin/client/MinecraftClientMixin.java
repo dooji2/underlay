@@ -49,11 +49,12 @@ public class MinecraftClientMixin {
     }
 
     @Inject(method = "doAttack", at = @At("HEAD"), cancellable = true)
-    private void onLeftClick(CallbackInfoReturnable<Boolean> cir) {
+    private void handleInitialBreaking(CallbackInfoReturnable<Boolean> cir) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
         if (overlayPos != null) {
+            UnderlayClient.breakOverlay(client, overlayPos);
             cir.setReturnValue(false);
             cir.cancel();
         }
