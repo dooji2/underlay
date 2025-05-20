@@ -4,8 +4,7 @@
 	"compatibilityLevel": "JAVA_17",
 	"client": [
 		"BlockAccessorImplMixin",
-		"JadeRayTracingMixin",
-		"MinecraftClientMixin"
+		"JadeRayTracingMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
