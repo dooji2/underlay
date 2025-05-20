@@ -8,4 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface ClientPlayerInteractionManagerAccessor {
     @Accessor("blockBreakingCooldown")
     void setBlockBreakingCooldown(int value);
+
+    @Accessor("blockBreakingCooldown")
+    int getBlockBreakingCooldown();
 }
