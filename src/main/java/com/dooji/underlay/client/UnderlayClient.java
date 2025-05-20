@@ -1,5 +1,6 @@
 package com.dooji.underlay.client;
 
+import com.dooji.underlay.client.mixin.MultiPlayerGameModeAccessor;
 import com.dooji.underlay.main.Underlay;
 import com.dooji.underlay.main.network.UnderlayNetworking;
 import com.dooji.underlay.main.network.payloads.AddOverlayPayload;
@@ -7,6 +8,7 @@ import com.dooji.underlay.main.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.main.network.payloads.SyncOverlaysPayload;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
@@ -28,8 +30,6 @@ import java.util.stream.Collectors;
 
 @Mod.EventBusSubscriber(modid = Underlay.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class UnderlayClient {
-    public static boolean wasRightDown = false;
-
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         MinecraftForge.EVENT_BUS.addListener(UnderlayClient::onClientTick);
@@ -90,26 +90,35 @@ public class UnderlayClient {
     }
 
     private static void onClientTick(TickEvent.ClientTickEvent event) {
-        var client = Minecraft.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
 
-        if (client.player == null || client.level == null) {
+        if (client.player == null || client.level == null || client.screen != null) {
             return;
         }
 
-        boolean rightDown = GLFW.glfwGetMouseButton(client.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-        boolean sneaking = client.player.isShiftKeyDown();
-        if (sneaking && rightDown && !wasRightDown) {
-            var hit = findOverlayUnderCrosshair(client);
-            if (hit != null) {
-                UnderlayNetworking.INSTANCE.send(PacketDistributor.SERVER.noArg(), new RemoveOverlayPayload(hit));
+        handleContinuousBreaking(client);
+    }
+
+    private static void handleContinuousBreaking(Minecraft client) {
+        if (client.options.keyAttack.isDown()) {
+            BlockPos hit = findOverlayUnderCrosshair(client);
+            MultiPlayerGameModeAccessor playerInteraction = (MultiPlayerGameModeAccessor) client.gameMode;
+            if (hit != null && playerInteraction != null) {
+                if (playerInteraction.getBlockBreakingCooldown() == 0) {
+                    breakOverlay(client, hit);
+                }
             }
         }
+    }
 
-        wasRightDown = rightDown;
+    public static void breakOverlay(Minecraft client, BlockPos pos) {
+        MultiPlayerGameModeAccessor interactionManager = (MultiPlayerGameModeAccessor) client.gameMode;
+        UnderlayNetworking.INSTANCE.send(PacketDistributor.SERVER.noArg(), new RemoveOverlayPayload(pos));
+        interactionManager.setBlockBreakingCooldown(5);
     }
 
     private static void onLevelUnload(LevelEvent.Unload event) {
@@ -119,7 +128,7 @@ public class UnderlayClient {
         }
     }
 
-    private static BlockPos findOverlayUnderCrosshair(Minecraft client) {
+    public static BlockPos findOverlayUnderCrosshair(Minecraft client) {
         var hit = UnderlayRaycast.trace(client.player, client.gameMode.getPickRange(), client.getFrameTime());
         return hit == null ? null : hit.getBlockPos();
     }
