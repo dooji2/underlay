@@ -1,6 +1,5 @@
 package com.dooji.underlay.main.network;
 
-import com.dooji.underlay.main.Underlay;
 import com.dooji.underlay.client.UnderlayClient;
 import com.dooji.underlay.main.UnderlayManager;
 import com.dooji.underlay.main.network.payloads.AddOverlayPayload;
@@ -10,77 +9,52 @@ import com.dooji.underlay.main.network.payloads.SyncOverlaysPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraft.world.level.ChunkPos;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
 public class UnderlayNetworking {
     private static final String PROTOCOL_VERSION = "1";
-    public static final ResourceLocation NETWORK_CHANNEL = ResourceLocation.tryBuild(Underlay.MOD_ID, "main");
-    public static SimpleChannel INSTANCE;
 
-    public static void init() {
-        INSTANCE = NetworkRegistry.ChannelBuilder
-                .named(NETWORK_CHANNEL)
-                .networkProtocolVersion(() -> PROTOCOL_VERSION)
-                .clientAcceptedVersions(v -> true)
-                .serverAcceptedVersions(v -> true)
-                .simpleChannel();
+    @SubscribeEvent
+    public static void register(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
 
-        int id = 0;
+        registrar.playToClient(
+                SyncOverlaysPayload.TYPE,
+                SyncOverlaysPayload.STREAM_CODEC,
+                (payload, context) -> UnderlayClient.handleSyncPacket(payload)
+        );
 
-        INSTANCE.messageBuilder(SyncOverlaysPayload.class, id++, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(SyncOverlaysPayload::write)
-                .decoder(SyncOverlaysPayload::read)
-                .consumerNetworkThread((msg, contextSupplier) -> {
-                    var context = contextSupplier.get();
+        registrar.playToClient(
+                AddOverlayPayload.TYPE,
+                AddOverlayPayload.STREAM_CODEC,
+                (payload, context) -> UnderlayClient.handleAddPacket(payload)
+        );
 
-                    if (context.getDirection().getReceptionSide().isClient()) {
-                        context.enqueueWork(() -> UnderlayClient.handleSyncPacket(msg));
-                    }
+        registrar.playBidirectional(
+                RemoveOverlayPayload.TYPE,
+                RemoveOverlayPayload.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        (payload, context) -> UnderlayClient.handleRemovePacket(payload),
+                        (payload, context) ->{
+                            ServerPlayer player = (ServerPlayer)context.player();
 
-                    context.setPacketHandled(true);
-                })
-                .add();
-
-        INSTANCE.messageBuilder(AddOverlayPayload.class, id++, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(AddOverlayPayload::write)
-                .decoder(AddOverlayPayload::read)
-                .consumerNetworkThread((msg, contextSupplier) -> {
-                    var context = contextSupplier.get();
-
-                    if (context.getDirection().getReceptionSide().isClient()) {
-                        context.enqueueWork(() -> UnderlayClient.handleAddPacket(msg));
-                    }
-
-                    context.setPacketHandled(true);
-                })
-                .add();
-
-        INSTANCE.messageBuilder(RemoveOverlayPayload.class, id++, null)
-                .encoder(RemoveOverlayPayload::write)
-                .decoder(RemoveOverlayPayload::read)
-                .consumerNetworkThread((msg, contextSupplier) -> {
-                    var context = contextSupplier.get();
-
-                    if (context.getDirection().getReceptionSide().isServer()) {
-                        context.enqueueWork(() -> {
-                            var player = context.getSender();
-                            if (player == null) return;
-
-                            var world = player.serverLevel();
-                            var pos = msg.pos();
+                            ServerLevel world = player.serverLevel();
+                            BlockPos pos = payload.pos();
 
                             if (!world.hasChunkAt(pos) || !world.getWorldBorder().isWithinBounds(pos)) return;
                             if (!world.mayInteract(player, pos)) return;
@@ -93,16 +67,11 @@ public class UnderlayNetworking {
                                     player.spawnAtLocation(new ItemStack(oldState.getBlock()), 0.5f);
                                 }
 
-                                INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new RemoveOverlayPayload(pos));
+                                PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new RemoveOverlayPayload(pos));
                             }
-                        });
-                    } else if (FMLEnvironment.dist == Dist.CLIENT) {
-                        context.enqueueWork(() -> UnderlayClient.handleRemovePacket(msg));
-                    }
-
-                    context.setPacketHandled(true);
-                })
-                .add();
+                        }
+                )
+        );
     }
 
     public static void syncOverlaysToPlayer(ServerPlayer player) {
@@ -114,12 +83,12 @@ public class UnderlayNetworking {
         );
 
         if (!tags.isEmpty()) {
-            INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new SyncOverlaysPayload(tags));
+            PacketDistributor.sendToPlayer(player, new SyncOverlaysPayload(tags));
         }
     }
 
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
         var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
-        INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new AddOverlayPayload(pos, tag));
+        PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new AddOverlayPayload(pos, tag));
     }
 }
