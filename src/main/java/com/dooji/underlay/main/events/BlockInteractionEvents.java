@@ -1,6 +1,5 @@
 package com.dooji.underlay.main.events;
 
-import com.dooji.underlay.main.Underlay;
 import com.dooji.underlay.main.UnderlayApi;
 import com.dooji.underlay.main.UnderlayManager;
 
@@ -16,17 +15,13 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-
-@Mod.EventBusSubscriber(modid = Underlay.MOD_ID)
 public class BlockInteractionEvents {
-
     @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void handleOverlayPlacement(PlayerInteractEvent.RightClickBlock event) {
+    public void handleOverlayPlacement(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide()) {
             return;
         }
