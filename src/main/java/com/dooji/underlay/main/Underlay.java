@@ -1,20 +1,18 @@
 package com.dooji.underlay.main;
 
-import com.dooji.underlay.main.network.UnderlayNetworking;
+import com.dooji.underlay.main.events.BlockInteractionEvents;
+import com.dooji.underlay.main.events.PlayerEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,18 +21,13 @@ public class Underlay {
     public static final String MOD_ID = "underlay";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "overlay"));
-    private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "exclude"));
+    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "overlay"));
+    private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "exclude"));
 
     public Underlay() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        modEventBus.addListener(this::commonSetup);
-        MinecraftForge.EVENT_BUS.register(this);
-    }
-
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(UnderlayNetworking::init);
+        NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(new BlockInteractionEvents());
+        NeoForge.EVENT_BUS.register(new PlayerEvents());
     }
 
     @SubscribeEvent

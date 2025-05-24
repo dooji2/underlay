@@ -2,41 +2,37 @@ package com.dooji.underlay.client;
 
 import com.dooji.underlay.client.mixin.MultiPlayerGameModeAccessor;
 import com.dooji.underlay.main.Underlay;
-import com.dooji.underlay.main.network.UnderlayNetworking;
 import com.dooji.underlay.main.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.main.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.main.network.payloads.SyncOverlaysPayload;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundSource;
-
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.network.PacketDistributor;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Mod.EventBusSubscriber(modid = Underlay.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Underlay.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class UnderlayClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        MinecraftForge.EVENT_BUS.addListener(UnderlayClient::onClientTick);
-        MinecraftForge.EVENT_BUS.addListener(UnderlayClient::onLevelUnload);
-        MinecraftForge.EVENT_BUS.addListener(UnderlayClient::onClientDisconnect);
-
-        event.enqueueWork(() -> {});
+        NeoForge.EVENT_BUS.addListener(UnderlayClient::onClientTick);
+        NeoForge.EVENT_BUS.addListener(UnderlayClient::onLevelUnload);
+        NeoForge.EVENT_BUS.addListener(UnderlayClient::onClientDisconnect);
         UnderlayRenderer.init();
     }
 
@@ -48,13 +44,13 @@ public class UnderlayClient {
     public static void handleSyncPacket(SyncOverlaysPayload payload) {
         var client = Minecraft.getInstance();
         var map = payload.tags().entrySet().stream()
-            .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    e -> NbtUtils.readBlockState(
-                            client.level.holderLookup(Registries.BLOCK),
-                            e.getValue()
-                    )
-            ));
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> NbtUtils.readBlockState(
+                                client.level.holderLookup(Registries.BLOCK),
+                                e.getValue()
+                        )
+                ));
 
         UnderlayManagerClient.sync(map);
         UnderlayRenderer.clearAllOverlays();
@@ -89,12 +85,8 @@ public class UnderlayClient {
         }
     }
 
-    private static void onClientTick(TickEvent.ClientTickEvent event) {
+    private static void onClientTick(ClientTickEvent.Post event) {
         Minecraft client = Minecraft.getInstance();
-
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
 
         if (client.player == null || client.level == null || client.screen != null) {
             return;
@@ -117,7 +109,7 @@ public class UnderlayClient {
 
     public static void breakOverlay(Minecraft client, BlockPos pos) {
         MultiPlayerGameModeAccessor interactionManager = (MultiPlayerGameModeAccessor) client.gameMode;
-        UnderlayNetworking.INSTANCE.send(PacketDistributor.SERVER.noArg(), new RemoveOverlayPayload(pos));
+        PacketDistributor.sendToServer(new RemoveOverlayPayload(pos));
         interactionManager.setBlockBreakingCooldown(5);
     }
 
@@ -129,7 +121,10 @@ public class UnderlayClient {
     }
 
     public static BlockPos findOverlayUnderCrosshair(Minecraft client) {
-        var hit = UnderlayRaycast.trace(client.player, client.gameMode.getPickRange(), client.getFrameTime());
-        return hit == null ? null : hit.getBlockPos();
+        double reach = Player.DEFAULT_BLOCK_INTERACTION_RANGE;
+        float partialTicks = (float)(client.getFrameTimeNs() / 50_000_000L);
+        assert client.player != null;
+        BlockHitResult result = UnderlayRaycast.trace(client.player, reach, partialTicks);
+        return result == null ? null : result.getBlockPos();
     }
 }

@@ -9,10 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.*;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -99,7 +96,7 @@ public class UnderlayPersistenceHandler {
             }
 
             try (FileInputStream fis = new FileInputStream(saveFile)) {
-                CompoundTag rootTag = NbtIo.readCompressed(fis);
+                CompoundTag rootTag = NbtIo.readCompressed(fis, NbtAccounter.unlimitedHeap());
 
                 if (rootTag.contains("overlays")) {
                     ListTag overlayList = rootTag.getList("overlays", 10);

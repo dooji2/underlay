@@ -15,10 +15,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.event.RenderLevelStageEvent.Stage;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 public class UnderlayRenderer {
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
@@ -27,7 +25,7 @@ public class UnderlayRenderer {
     private static final long FULL_REFRESH_INTERVAL = 500;
 
     public static void init() {
-        MinecraftForge.EVENT_BUS.addListener(UnderlayRenderer::onRenderLevel);
+        NeoForge.EVENT_BUS.addListener(UnderlayRenderer::onRenderLevel);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
@@ -72,7 +70,7 @@ public class UnderlayRenderer {
     }
 
     private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != Stage.AFTER_PARTICLES) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             return;
         }
 
