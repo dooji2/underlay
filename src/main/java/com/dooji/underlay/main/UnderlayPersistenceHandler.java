@@ -17,8 +17,16 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.core.BlockPos;
 
 public class UnderlayPersistenceHandler {
-    private static final String SAVE_FILE_NAME = "underlays.dat";
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
+
+    private static String getSaveFileName(Level world) {
+        String dimensionId = world.dimension().location().toString();
+        if ("minecraft:overworld".equals(dimensionId)) {
+            return "underlays.dat";
+        }
+
+        return "underlays_" + dimensionId.replace(':', '_') + ".dat";
+    }
 
     public static void saveOverlays(Level world, Map<BlockPos, BlockState> overlays) {
         if (world == null || overlays == null) {
@@ -52,7 +60,8 @@ public class UnderlayPersistenceHandler {
 
                 ServerLevel serverWorld = (ServerLevel) world;
                 Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
-                File saveFile = saveDir.resolve(SAVE_FILE_NAME).toFile();
+                String fileName = getSaveFileName(world);
+                File saveFile = saveDir.resolve(fileName).toFile();
 
                 saveDir.toFile().mkdirs();
 
@@ -88,7 +97,8 @@ public class UnderlayPersistenceHandler {
         try {
             ServerLevel serverWorld = (ServerLevel) world;
             Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
-            File saveFile = saveDir.resolve(SAVE_FILE_NAME).toFile();
+            String fileName = getSaveFileName(world);
+            File saveFile = saveDir.resolve(fileName).toFile();
 
             if (!saveFile.exists()) {
                 Underlay.LOGGER.info("No existing overlay save file found");

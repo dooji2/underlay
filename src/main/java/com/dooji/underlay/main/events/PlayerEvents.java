@@ -13,4 +13,18 @@ public class PlayerEvents {
             UnderlayNetworking.syncOverlaysToPlayer(player);
         }
     }
+
+    @SubscribeEvent
+    public void onPlayerChangedDim(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            UnderlayNetworking.syncOverlaysToPlayer(player);
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            UnderlayNetworking.syncOverlaysToPlayer(player);
+        }
+    }
 }
