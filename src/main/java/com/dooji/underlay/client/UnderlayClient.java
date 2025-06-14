@@ -1,6 +1,6 @@
 package com.dooji.underlay.client;
 
-import com.dooji.underlay.client.mixin.MultiPlayerGameModeAccessor;
+import com.dooji.underlay.mixin.MultiPlayerGameModeAccessor;
 import com.dooji.underlay.main.Underlay;
 import com.dooji.underlay.main.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.main.network.payloads.RemoveOverlayPayload;

@@ -1,7 +1,8 @@
 {
   "required": true,
-  "package": "com.dooji.underlay.client.mixin",
+  "package": "com.dooji.underlay.mixin",
   "compatibilityLevel": "JAVA_21",
+  "mixins": [],
   "client": [
     "MultiPlayerGameModeAccessor",
     "MinecraftMixin"

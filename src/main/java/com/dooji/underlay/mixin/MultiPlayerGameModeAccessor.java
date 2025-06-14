@@ -1,4 +1,4 @@
-package com.dooji.underlay.client.mixin;
+package com.dooji.underlay.mixin;
 
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import org.spongepowered.asm.mixin.Mixin;

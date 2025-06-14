@@ -1,4 +1,4 @@
-package com.dooji.underlay.client.mixin;
+package com.dooji.underlay.mixin;
 
 import com.dooji.underlay.client.UnderlayClient;
 import net.minecraft.client.Minecraft;
