@@ -70,7 +70,7 @@ public class UnderlayRenderer {
     }
 
     private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_MIPPED_BLOCKS_BLOCKS) {
             return;
         }
 
@@ -116,7 +116,7 @@ public class UnderlayRenderer {
             poseStack.popPose();
         }
 
-        bufferSource.endBatch();
+        bufferSource.endBatch(RenderType.cutoutMipped());
         poseStack.popPose();
     }
 }
