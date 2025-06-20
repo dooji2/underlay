@@ -20,9 +20,6 @@
 		],
 		"client": [
 			"com.dooji.underlay.UnderlayClient"
-		],
-		"jade": [
-			"com.dooji.underlay.jade.UnderlayJadePlugin"
 		]
 	},
 	"mixins": [
@@ -30,19 +27,12 @@
 		{
 			"config": "underlay.client.mixins.json",
 			"environment": "client"
-		},
-		{
-			"config": "underlay.client.jade.mixins.json",
-			"environment": "client"
 		}
 	],
 	"depends": {
 		"fabricloader": ">=0.16.14",
-		"minecraft": "1.21.5",
+		"minecraft": ">1.21.5 <1.21.7",
 		"java": ">=21",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
+		"fabric-api": ">=0.126.1+1.21.6"
 	}
 }
