@@ -28,7 +28,6 @@ public class MinecraftClientMixin {
         PlayerEntity player = client.player;
 
         if (player == null) {
-            this.crosshairTarget = originalTarget;
             return;
         }
 

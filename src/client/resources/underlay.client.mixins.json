@@ -4,8 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"ClientPlayerInteractionManagerAccessor",
-		"MinecraftClientMixin",
-		"BlockRenderManagerAccessor"
+		"MinecraftClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
