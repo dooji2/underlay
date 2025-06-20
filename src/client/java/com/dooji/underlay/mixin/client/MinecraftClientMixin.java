@@ -19,7 +19,6 @@ import net.minecraft.util.math.Vec3d;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
-
     @Shadow public HitResult crosshairTarget;
     
     @Inject(method = "tick", at = @At("TAIL"))
@@ -33,11 +32,11 @@ public class MinecraftClientMixin {
             return;
         }
 
-        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(false));
+        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
         HitResult chosenTarget = originalTarget;
 
         if (overlayHit != null) {
-            Vec3d eye = player.getCameraPosVec(client.getRenderTickCounter().getTickProgress(false));
+            Vec3d eye = player.getCameraPosVec(client.getRenderTickCounter().getDynamicDeltaTicks());
             double overlayDistanceSq = overlayHit.getPos().squaredDistanceTo(eye);
             double originalDistanceSq = (originalTarget == null) ? Double.MAX_VALUE : originalTarget.getPos().squaredDistanceTo(eye);
 

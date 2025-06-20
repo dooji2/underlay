@@ -53,7 +53,7 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// jade
-	// modImplementation "maven.modrinth:nvQzSEkH:VNSIKHbV"
+	modImplementation "maven.modrinth:nvQzSEkH:AMBKaYce"
 	
 }
 

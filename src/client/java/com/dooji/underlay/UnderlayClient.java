@@ -102,7 +102,7 @@ public class UnderlayClient implements ClientModInitializer {
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
 		if (client.player == null) return null;
 
-		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(false));
+		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
 		return overlayHit == null ? null : overlayHit.getBlockPos();
 	}
 }
