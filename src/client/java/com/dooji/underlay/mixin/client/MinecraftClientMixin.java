@@ -33,11 +33,11 @@ public class MinecraftClientMixin {
             return;
         }
 
-        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+        BlockHitResult overlayHit = UnderlayRaycast.trace(player, player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(false));
         HitResult chosenTarget = originalTarget;
 
         if (overlayHit != null) {
-            Vec3d eye = player.getCameraPosVec(client.getRenderTickCounter().getTickProgress(true));
+            Vec3d eye = player.getCameraPosVec(client.getRenderTickCounter().getTickProgress(false));
             double overlayDistanceSq = overlayHit.getPos().squaredDistanceTo(eye);
             double originalDistanceSq = (originalTarget == null) ? Double.MAX_VALUE : originalTarget.getPos().squaredDistanceTo(eye);
 

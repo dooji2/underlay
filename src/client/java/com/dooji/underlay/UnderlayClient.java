@@ -2,8 +2,6 @@ package com.dooji.underlay;
 
 import java.util.Map;
 
-import org.lwjgl.glfw.GLFW;
-
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
@@ -104,7 +102,7 @@ public class UnderlayClient implements ClientModInitializer {
 	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
 		if (client.player == null) return null;
 
-		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(true));
+		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getTickProgress(false));
 		return overlayHit == null ? null : overlayHit.getBlockPos();
 	}
 }

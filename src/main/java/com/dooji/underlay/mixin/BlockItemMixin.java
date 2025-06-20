@@ -7,7 +7,6 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.ActionResult;
@@ -25,7 +24,6 @@ import com.dooji.underlay.UnderlayApi;
 
 @Mixin(BlockItem.class)
 public class BlockItemMixin {
-
 	@Inject(method = "place(Lnet/minecraft/item/ItemPlacementContext;)Lnet/minecraft/util/ActionResult;", at = @At("HEAD"), cancellable = true)
 	private void handleOverlayPlacement(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
 		BlockItem self = (BlockItem)(Object)this;
@@ -55,7 +53,7 @@ public class BlockItemMixin {
 			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), world, pos, overlay);
 			PlayerEntity player = context.getPlayer();
 
-			if (!((ServerWorld)world).canEntityModifyAt(player, pos)) {
+			if (!world.canEntityModifyAt(player, pos)) {
                 cir.setReturnValue(ActionResult.FAIL);
                 cir.cancel();
 
@@ -70,7 +68,7 @@ public class BlockItemMixin {
 			world.playSound(null, pos, sounds.getPlaceSound(), SoundCategory.BLOCKS, sounds.getVolume(), sounds.getPitch());
 		}
 
-		cir.setReturnValue(world.isClient() ? ActionResult.SUCCESS : ActionResult.SUCCESS_SERVER);
+		cir.setReturnValue(ActionResult.SUCCESS);
 		cir.cancel();
 	}
 }

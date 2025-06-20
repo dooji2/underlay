@@ -42,7 +42,7 @@ public class UnderlayNetworking {
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
 			ServerPlayerEntity player = context.player();
-			ServerWorld world = (ServerWorld) player.getWorld();
+			ServerWorld world = player.getWorld();
 			BlockPos pos = payload.pos();
 
 			if (!world.canEntityModifyAt(player, pos)) {
