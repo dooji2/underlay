@@ -8,6 +8,8 @@ import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -27,22 +29,20 @@ public class UnderlayNetworking {
 		PayloadTypeRegistry.playS2C().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			ServerPlayerEntity player = handler.getPlayer();
-			var world = player.getWorld();
+			syncOverlaysToPlayer(handler.getPlayer());
+		});
 
-			Map<BlockPos, NbtCompound> tags = new HashMap<>();
-			UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
-				tags.put(pos, NbtHelper.fromBlockState(state))
-			);
+		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, from, to) -> {
+			syncOverlaysToPlayer(player);
+		});
 
-			if (!tags.isEmpty()) {
-				ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
-			}
+		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+			syncOverlaysToPlayer(newPlayer);
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
 			ServerPlayerEntity player = context.player();
-			ServerWorld world = player.getWorld();
+			ServerWorld world = (ServerWorld) player.getWorld();
 			BlockPos pos = payload.pos();
 
 			if (!world.canEntityModifyAt(player, pos)) {
@@ -60,6 +60,19 @@ public class UnderlayNetworking {
 				broadcastRemove(world, pos);
 			}
 		});
+	}
+
+	public static void syncOverlaysToPlayer(ServerPlayerEntity player) {
+		var world = player.getWorld();
+
+		Map<BlockPos, NbtCompound> tags = new HashMap<>();
+		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
+			tags.put(pos, NbtHelper.fromBlockState(state))
+		);
+
+		if (!tags.isEmpty()) {
+			ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
+		}
 	}
 
 	public static void broadcastAdd(ServerWorld world, BlockPos pos) {

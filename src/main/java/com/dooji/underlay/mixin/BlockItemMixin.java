@@ -7,6 +7,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.ActionResult;
@@ -38,7 +39,7 @@ public class BlockItemMixin {
 			return;
 		}
 		
-		if (!UnderlayApi.isOverlayBlock(block)) {
+		if (!world.isClient() && !UnderlayApi.isOverlayBlock((ServerWorld)world, block)) {
 			return;
 		}
 
@@ -50,7 +51,7 @@ public class BlockItemMixin {
 		ItemStack stack = context.getStack();
 
 		if (!world.isClient()) {
-			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), world, pos, overlay);
+			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), (ServerWorld)world, pos, overlay);
 			PlayerEntity player = context.getPlayer();
 
 			if (!world.canEntityModifyAt(player, pos)) {

@@ -17,13 +17,13 @@ import net.minecraft.world.World;
 public class UnderlayManager {
     private static final Map<String, Map<BlockPos, BlockState>> OVERLAYS = new ConcurrentHashMap<>();
 
-    public static void addOverlay(ServerPlayerEntity player, World world, BlockPos pos, BlockState blockState) {
+    public static void addOverlay(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState blockState) {
         if (world == null || pos == null || blockState == null) {
             Underlay.LOGGER.warn("Attempted to add overlay with null parameters");
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+        if (!UnderlayApi.isOverlayBlock(world, blockState.getBlock())) {
             Underlay.LOGGER.warn("Attempted to add non-overlay block as overlay: " + blockState);
             return;
         }
