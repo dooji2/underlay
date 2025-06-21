@@ -7,9 +7,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.CarpetBlock;
 import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.TrapdoorBlock;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.block.PressurePlateBlock;
 import net.minecraft.block.SlabBlock;
 import net.minecraft.block.AbstractRailBlock;
+
+import static com.dooji.underlay.Underlay.EXCLUDE_TAG;
 
 public class UnderlayApi {
 	static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
@@ -31,20 +35,25 @@ public class UnderlayApi {
 		CUSTOM_BLOCKS_DP.add(block);
 	}
 
-	public static boolean isOverlayBlock(Block block) {
+	public static boolean isOverlayBlock(ServerWorld world, Block block) {
 		if (block == null) {
 			return false;
 		}
 
-		if (block instanceof CarpetBlock
+		if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block)) {
+			return true;
+		}
+
+		var blocks = world.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
+		if (blocks.getEntry(block).isIn(EXCLUDE_TAG)) {
+			return false;
+		}
+
+		return block instanceof CarpetBlock
                 || block instanceof ButtonBlock
                 || block instanceof TrapdoorBlock
                 || block instanceof PressurePlateBlock
                 || block instanceof SlabBlock
-                || block instanceof AbstractRailBlock) {
-			return true;
-		}
-        
-		return CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block);
+                || block instanceof AbstractRailBlock;
 	}
 }
