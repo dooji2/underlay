@@ -8,7 +8,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 
 public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) {
-
     public static void write(SyncOverlaysPayload message, FriendlyByteBuf buf) {
         buf.writeInt(message.tags.size());
 

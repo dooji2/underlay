@@ -24,7 +24,6 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = Underlay.MOD_ID)
 public class BlockInteractionEvents {
-
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void handleOverlayPlacement(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide()) {

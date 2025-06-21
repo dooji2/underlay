@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 
 public record AddOverlayPayload(BlockPos pos, CompoundTag stateTag) {
-
     public static void write(AddOverlayPayload message, FriendlyByteBuf buf) {
         buf.writeBlockPos(message.pos);
         buf.writeNbt(message.stateTag);

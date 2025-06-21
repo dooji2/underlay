@@ -1,15 +1,14 @@
 package com.dooji.underlay.main;
 
 import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ButtonBlock;
-import net.minecraft.world.level.block.CarpetBlock;
-import net.minecraft.world.level.block.PressurePlateBlock;
-import net.minecraft.world.level.block.RailBlock;
-import net.minecraft.world.level.block.SlabBlock;
-import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.*;
+
+import static com.dooji.underlay.main.Underlay.EXCLUDE_TAG;
 
 public class UnderlayApi {
     static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
@@ -36,15 +35,22 @@ public class UnderlayApi {
             return false;
         }
 
-        if (block instanceof CarpetBlock
+        if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block)) {
+            return true;
+        }
+
+        Optional<HolderSet.Named<Block>> maybeExcluded = BuiltInRegistries.BLOCK.getTag(EXCLUDE_TAG);
+        if (maybeExcluded.map(named ->
+                named.stream().anyMatch(holder -> holder.value() == block)
+        ).orElse(false)) {
+            return false;
+        }
+
+        return block instanceof CarpetBlock
                 || block instanceof ButtonBlock
                 || block instanceof TrapDoorBlock
                 || block instanceof PressurePlateBlock
                 || block instanceof SlabBlock
-                || block instanceof RailBlock) {
-            return true;
-        }
-
-        return CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block);
+                || block instanceof RailBlock;
     }
 }

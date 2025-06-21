@@ -1,7 +1,7 @@
 package com.dooji.underlay.main;
 
 import com.dooji.underlay.main.network.UnderlayNetworking;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -23,8 +23,8 @@ public class Underlay {
     public static final String MOD_ID = "underlay";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "overlay"));
-    private static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.tryBuild(MOD_ID, "exclude"));
+    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(Registries.BLOCK, ResourceLocation.tryBuild(MOD_ID, "overlay"));
+    public static final TagKey<Block> EXCLUDE_TAG = TagKey.create(Registries.BLOCK, ResourceLocation.tryBuild(MOD_ID, "exclude"));
 
     public Underlay() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -48,7 +48,7 @@ public class Underlay {
 
     private static void reloadDatapackBlocks(ServerLevel world) {
         UnderlayApi.CUSTOM_BLOCKS_DP.clear();
-        var blocks = world.registryAccess().registryOrThrow(BuiltInRegistries.BLOCK.key());
+        var blocks = world.registryAccess().registryOrThrow(Registries.BLOCK);
 
         blocks.getTag(OVERLAY_TAG).ifPresent(tag -> tag.forEach(entry -> {
             Block block = entry.value();
