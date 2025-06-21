@@ -4,7 +4,6 @@ import java.util.Map;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.PacketByteBuf;
-import org.lwjgl.glfw.GLFW;
 
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;

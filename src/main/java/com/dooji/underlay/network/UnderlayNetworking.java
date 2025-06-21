@@ -9,6 +9,8 @@ import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
 import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
@@ -23,19 +25,15 @@ import net.minecraft.util.math.BlockPos;
 public class UnderlayNetworking {
 	public static void init() {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			ServerPlayerEntity player = handler.getPlayer();
-			var world = player.getWorld();
+			syncOverlaysToPlayer(handler.getPlayer());
+		});
 
-			Map<BlockPos, NbtCompound> tags = new HashMap<>();
-			UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
-				tags.put(pos, NbtHelper.fromBlockState(state))
-			);
+		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, from, to) -> {
+			syncOverlaysToPlayer(player);
+		});
 
-			if (!tags.isEmpty()) {
-				PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-				SyncOverlaysPayload.write(buf, new SyncOverlaysPayload(tags));
-				ServerPlayNetworking.send(player, SyncOverlaysPayload.ID, buf);
-			}
+		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+			syncOverlaysToPlayer(newPlayer);
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (server, player, handler, buf, responseSender) -> {
@@ -58,6 +56,20 @@ public class UnderlayNetworking {
 				broadcastRemove(world, pos);
 			}
 		});
+	}
+
+	public static void syncOverlaysToPlayer(ServerPlayerEntity player) {
+		var world = player.getWorld();
+		Map<BlockPos, NbtCompound> tags = new HashMap<>();
+		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
+			tags.put(pos, NbtHelper.fromBlockState(state))
+		);
+
+		if (!tags.isEmpty()) {
+			PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+			SyncOverlaysPayload.write(buf, new SyncOverlaysPayload(tags));
+			ServerPlayNetworking.send(player, SyncOverlaysPayload.ID, buf);
+		}
 	}
 
 	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
