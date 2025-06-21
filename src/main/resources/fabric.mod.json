@@ -40,9 +40,6 @@
 		"fabricloader": ">=0.16.14",
 		"minecraft": ">=1.21.2 <=1.21.4",
 		"java": ">=21",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
+		"fabric-api": ">=0.106.1+1.21.2"
 	}
 }
