@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -72,7 +71,7 @@ public class UnderlayRenderer {
     }
 
     private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != Stage.AFTER_PARTICLES) {
+        if (event.getStage() != Stage.AFTER_CUTOUT_MIPPED_BLOCKS_BLOCKS) {
             return;
         }
 
@@ -110,7 +109,6 @@ public class UnderlayRenderer {
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
-            VertexConsumer buffer = bufferSource.getBuffer(RenderType.cutoutMipped());
             int packedLight = LevelRenderer.getLightColor(client.level, pos);
             int packedOverlay = OverlayTexture.NO_OVERLAY;
 
@@ -118,7 +116,7 @@ public class UnderlayRenderer {
             poseStack.popPose();
         }
 
-        bufferSource.endBatch();
+        bufferSource.endBatch(RenderType.cutoutMipped());
         poseStack.popPose();
     }
 }
