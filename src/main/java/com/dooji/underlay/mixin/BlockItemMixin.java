@@ -40,7 +40,7 @@ public class BlockItemMixin {
 			return;
 		}
 		
-		if (!UnderlayApi.isOverlayBlock(block)) {
+		if (!world.isClient() && !UnderlayApi.isOverlayBlock((ServerWorld)world, block)) {
 			return;
 		}
 
@@ -52,7 +52,7 @@ public class BlockItemMixin {
 		ItemStack stack = context.getStack();
 
 		if (!world.isClient()) {
-			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), world, pos, overlay);
+			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), (ServerWorld)world, pos, overlay);
 			PlayerEntity player = context.getPlayer();
 
 			if (!((ServerWorld)world).canPlayerModifyAt(player, pos)) {
