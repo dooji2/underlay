@@ -1,6 +1,6 @@
 package com.dooji.underlay.client;
 
-import com.dooji.underlay.client.mixin.MultiPlayerGameModeAccessor;
+import com.dooji.underlay.mixin.MultiPlayerGameModeAccessor;
 import com.dooji.underlay.main.Underlay;
 import com.dooji.underlay.main.network.UnderlayNetworking;
 import com.dooji.underlay.main.network.payloads.AddOverlayPayload;
@@ -8,7 +8,6 @@ import com.dooji.underlay.main.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.main.network.payloads.SyncOverlaysPayload;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
@@ -23,7 +22,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.network.PacketDistributor;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Map;
 import java.util.stream.Collectors;
