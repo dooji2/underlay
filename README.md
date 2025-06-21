@@ -36,3 +36,14 @@ This mod adds an API that lets you mark your blocks as "yes you can behave like 
   ]
 }
 ```
+
+- If you want to **exclude** a block from being able to be placed as an overlay, on 1.20.1 create `data/underlay/tags/blocks/exclude.json` in your datapack, on 1.21 and above create `data/underlay/tags/block/exclude.json`, then list the blocks you want to be omitted, such as:
+```
+{
+  "replace": false,
+  "values": [
+    "minecraft:oak_button",
+    "minecraft:rail"
+  ]
+}
+```
