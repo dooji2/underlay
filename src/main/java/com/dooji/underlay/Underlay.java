@@ -20,7 +20,7 @@ public class Underlay implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static final TagKey<Block> OVERLAY_TAG = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID, "overlay"));
-	private static final TagKey<Block> EXCLUDE_TAG = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID, "exclude"));
+	public static final TagKey<Block> EXCLUDE_TAG = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID, "exclude"));
 
 	@Override
 	public void onInitialize() {
