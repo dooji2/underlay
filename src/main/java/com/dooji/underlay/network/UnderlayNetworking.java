@@ -37,24 +37,27 @@ public class UnderlayNetworking {
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (server, player, handler, buf, responseSender) -> {
-			ServerWorld world = (ServerWorld) player.getWorld();
 			RemoveOverlayPayload payload = RemoveOverlayPayload.read(buf);
-			BlockPos pos = payload.pos();
 
-			if (!world.canPlayerModifyAt(player, pos)) {
-				return;
-			}
+			server.execute(() -> {
+				ServerWorld world = (ServerWorld) player.getWorld();
+				BlockPos pos = payload.pos();
 
-			if (UnderlayManager.hasOverlay(world, pos)) {
-				var old = UnderlayManager.getOverlay(world, pos);
-				UnderlayManager.removeOverlay(world, pos);
-				
-				if (!player.isCreative()) {
-					ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
+				if (!world.canPlayerModifyAt(player, pos)) {
+					return;
 				}
 
-				broadcastRemove(world, pos);
-			}
+				if (UnderlayManager.hasOverlay(world, pos)) {
+					var old = UnderlayManager.getOverlay(world, pos);
+					UnderlayManager.removeOverlay(world, pos);
+					
+					if (!player.isCreative()) {
+						ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
+					}
+
+					broadcastRemove(world, pos);
+				}
+			});
 		});
 	}
 
