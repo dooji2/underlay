@@ -13,6 +13,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 
 import net.minecraftforge.api.distmarker.Dist;
@@ -90,7 +91,7 @@ public class UnderlayNetworking {
                                 UnderlayManager.removeOverlay(world, pos);
 
                                 if (!player.isCreative()) {
-                                    player.spawnAtLocation(new ItemStack(oldState.getBlock()), 0.5f);
+                                    world.addFreshEntity(new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(oldState.getBlock())));
                                 }
 
                                 INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new RemoveOverlayPayload(pos));
