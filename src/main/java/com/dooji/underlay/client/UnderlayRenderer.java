@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent.Stage;
+import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.common.MinecraftForge;
 
 public class UnderlayRenderer {
@@ -70,8 +71,8 @@ public class UnderlayRenderer {
         }
     }
 
-    private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != Stage.AFTER_CUTOUT_MIPPED_BLOCKS_BLOCKS) {
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != Stage.AFTER_BLOCK_ENTITIES) {
             return;
         }
 
@@ -112,7 +113,7 @@ public class UnderlayRenderer {
             int packedLight = LevelRenderer.getLightColor(client.level, pos);
             int packedOverlay = OverlayTexture.NO_OVERLAY;
 
-            blockRenderer.renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay);
+            blockRenderer.renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay, ModelData.EMPTY, RenderType.cutoutMipped());
             poseStack.popPose();
         }
 
