@@ -2,8 +2,6 @@ package com.dooji.underlay;
 
 import java.util.Map;
 
-import org.lwjgl.glfw.GLFW;
-
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;

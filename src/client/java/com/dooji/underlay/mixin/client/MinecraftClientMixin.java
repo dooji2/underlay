@@ -10,8 +10,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.dooji.underlay.UnderlayClient;
 import com.dooji.underlay.UnderlayManagerClient;
 import com.dooji.underlay.UnderlayRaycast;
+import com.dooji.underlay.network.payloads.PickItemFromOverlayPayload;
 
-import net.minecraft.block.BlockState;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.BlockHitResult;
@@ -68,11 +70,8 @@ public class MinecraftClientMixin {
         BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
         
         if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
-            BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
-            if (client.player != null && client.player.getAbilities().creativeMode) {
-                client.player.getInventory().insertStack(underlayState.getBlock().asItem().getDefaultStack());
-                ci.cancel();
-            }
+            ClientPlayNetworking.send(new PickItemFromOverlayPayload(overlayPos));
+            ci.cancel();
         }
     }
 }
