@@ -15,6 +15,7 @@ import com.dooji.underlay.UnderlayRaycast;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
@@ -67,11 +68,17 @@ public class MinecraftClientMixin {
     private void onItemPick(CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
         BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
-        
+
         if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
             BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
             if (client.player != null && client.player.getAbilities().creativeMode) {
-                client.player.getInventory().addPickBlock(underlayState.getBlock().asItem().getDefaultStack());
+                ItemStack itemStack = underlayState.getBlock().asItem().getDefaultStack();
+                client.player.getInventory().addPickBlock(itemStack);
+
+                if (client.interactionManager != null) {
+                    client.interactionManager.clickCreativeStack(itemStack, 36 + client.player.getInventory().selectedSlot);
+                }
+
                 ci.cancel();
             }
         }
