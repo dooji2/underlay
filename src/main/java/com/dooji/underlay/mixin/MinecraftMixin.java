@@ -2,8 +2,10 @@ package com.dooji.underlay.mixin;
 
 import com.dooji.underlay.client.UnderlayClient;
 import com.dooji.underlay.client.UnderlayManagerClient;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,7 +35,13 @@ public class MinecraftMixin {
         if (overlayPos != null) {
             BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
             if (client.player != null && client.player.getAbilities().instabuild) {
-                client.player.getInventory().setPickedItem(underlayState.getBlock().asItem().getDefaultInstance());
+                ItemStack itemStack = underlayState.getBlock().asItem().getDefaultInstance();
+                client.player.getInventory().setPickedItem(itemStack);
+
+                if (client.gameMode != null) {
+                    client.gameMode.handleCreativeModeItemAdd(itemStack, 36 + client.player.getInventory().selected);
+                }
+                
                 ci.cancel();
             }
         }
