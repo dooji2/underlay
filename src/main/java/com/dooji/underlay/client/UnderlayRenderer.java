@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -16,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.common.NeoForge;
 
 public class UnderlayRenderer {
@@ -108,11 +108,10 @@ public class UnderlayRenderer {
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
-            VertexConsumer buffer = bufferSource.getBuffer(RenderType.cutoutMipped());
             int packedLight = LevelRenderer.getLightColor(client.level, pos);
             int packedOverlay = OverlayTexture.NO_OVERLAY;
 
-            blockRenderer.renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay);
+            blockRenderer.renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay, ModelData.EMPTY, RenderType.cutoutMipped());
             poseStack.popPose();
         }
 
