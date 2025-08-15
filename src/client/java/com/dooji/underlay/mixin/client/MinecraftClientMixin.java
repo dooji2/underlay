@@ -1,6 +1,8 @@
 package com.dooji.underlay.mixin.client;
 
 import com.dooji.underlay.UnderlayClient;
+import com.dooji.underlay.UnderlayManagerClient;
+
 import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -10,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.dooji.underlay.UnderlayRaycast;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.BlockHitResult;
@@ -57,6 +60,20 @@ public class MinecraftClientMixin {
             UnderlayClient.breakOverlay(client, overlayPos);
             cir.setReturnValue(false);
             cir.cancel();
+        }
+    }
+
+    @Inject(method = "doItemPick", at = @At("HEAD"), cancellable = true)
+    private void onItemPick(CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
+        
+        if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
+            BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
+            if (client.player != null && client.player.getAbilities().creativeMode) {
+                client.player.getInventory().addPickBlock(underlayState.getBlock().asItem().getDefaultStack());
+                ci.cancel();
+            }
         }
     }
 }
