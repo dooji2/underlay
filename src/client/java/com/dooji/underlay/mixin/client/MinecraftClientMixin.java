@@ -70,7 +70,7 @@ public class MinecraftClientMixin {
         if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
             BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
             if (client.player != null && client.player.getAbilities().creativeMode) {
-                client.player.getInventory().addPickBlock(underlayState.getBlock().asItem().getDefaultStack());
+                client.player.getInventory().insertStack(underlayState.getBlock().asItem().getDefaultStack());
                 ci.cancel();
             }
         }
