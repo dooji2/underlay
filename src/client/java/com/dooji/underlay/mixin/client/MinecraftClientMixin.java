@@ -18,6 +18,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.block.BlockState;
+import net.minecraft.item.ItemStack;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
@@ -70,7 +71,13 @@ public class MinecraftClientMixin {
         if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
             BlockState underlayState = UnderlayManagerClient.getOverlay(overlayPos);
             if (client.player != null && client.player.getAbilities().creativeMode) {
-                client.player.getInventory().addPickBlock(underlayState.getBlock().asItem().getDefaultStack());
+                ItemStack itemStack = underlayState.getBlock().asItem().getDefaultStack();
+                client.player.getInventory().addPickBlock(itemStack);
+
+                if (client.interactionManager != null) {
+                    client.interactionManager.clickCreativeStack(itemStack, 36 + client.player.getInventory().selectedSlot);
+                }
+
                 ci.cancel();
             }
         }
