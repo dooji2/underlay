@@ -48,13 +48,11 @@ public class BlockInteractionEvents {
         BlockPos clickedPos = event.getPos();
         BlockPos targetPos;
 
-        if (face == Direction.DOWN) {
-            targetPos = clickedPos;
-        } else if (face == Direction.UP) {
-            targetPos = clickedPos.above();
-        } else {
+        if (face != Direction.UP) {
             return;
         }
+
+        targetPos = clickedPos.above();
 
         ServerLevel world = (ServerLevel) event.getLevel();
 
@@ -75,6 +73,11 @@ public class BlockInteractionEvents {
         }
 
         if (Block.isShapeFullBlock(existingState.getShape(world, targetPos))) {
+            return;
+        }
+
+        // prevent overlay placement if there's fluid in the block for now
+        if (!existingState.getFluidState().isEmpty()) {
             return;
         }
 
