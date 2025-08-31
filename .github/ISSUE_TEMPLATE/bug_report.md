@@ -12,8 +12,8 @@ Thanks for reporting! Please fill out all fields so I can help.
 > Issues missing information may be closed.
 
 ## Checklist
-- [ ] I have searched existing [issues](../../issues) and this is not a duplicate.
-- [ ] I am confident this issue is **not caused by another mod**.
+- [x] I have searched existing [issues](../../issues) and this is not a duplicate.
+- [x] I am confident this issue is **not caused by another mod**.
 
 ## Details
 
