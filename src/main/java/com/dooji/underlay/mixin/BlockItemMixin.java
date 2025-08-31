@@ -44,7 +44,7 @@ public class BlockItemMixin {
 			return;
 		}
 
-		if (existing.isAir() || Block.isShapeFullCube(existing.getOutlineShape(world, pos)) || context.getSide() != Direction.UP) {
+		if (existing.isAir() || Block.isShapeFullCube(existing.getOutlineShape(world, pos)) || context.getSide() != Direction.UP || !existing.getFluidState().isEmpty()) {
 			return;
 		}
 
