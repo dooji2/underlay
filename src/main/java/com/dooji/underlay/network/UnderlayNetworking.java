@@ -68,11 +68,9 @@ public class UnderlayNetworking {
 			tags.put(pos, NbtHelper.fromBlockState(state))
 		);
 
-		if (!tags.isEmpty()) {
-			PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-			SyncOverlaysPayload.write(buf, new SyncOverlaysPayload(tags));
-			ServerPlayNetworking.send(player, SyncOverlaysPayload.ID, buf);
-		}
+		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+		SyncOverlaysPayload.write(buf, new SyncOverlaysPayload(tags));
+		ServerPlayNetworking.send(player, SyncOverlaysPayload.ID, buf);
 	}
 
 	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
