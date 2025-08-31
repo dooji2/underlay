@@ -82,9 +82,7 @@ public class UnderlayNetworking {
                 tags.put(pos, NbtUtils.writeBlockState(state))
         );
 
-        if (!tags.isEmpty()) {
-            PacketDistributor.sendToPlayer(player, new SyncOverlaysPayload(tags));
-        }
+        PacketDistributor.sendToPlayer(player, new SyncOverlaysPayload(tags));
     }
 
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
