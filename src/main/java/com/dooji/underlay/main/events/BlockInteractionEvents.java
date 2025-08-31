@@ -15,6 +15,7 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -44,13 +45,11 @@ public class BlockInteractionEvents {
         BlockPos clickedPos = event.getPos();
         BlockPos targetPos;
 
-        if (face == Direction.DOWN) {
-            targetPos = clickedPos;
-        } else if (face == Direction.UP) {
-            targetPos = clickedPos.above();
-        } else {
+        if (face != Direction.UP) {
             return;
         }
+
+        targetPos = clickedPos.above();
 
         ServerLevel world = (ServerLevel) event.getLevel();
 
@@ -71,6 +70,11 @@ public class BlockInteractionEvents {
         }
 
         if (Block.isShapeFullBlock(existingState.getShape(world, targetPos))) {
+            return;
+        }
+
+        // prevent overlay placement if there's fluid in the block for now
+        if (!existingState.getFluidState().isEmpty()) {
             return;
         }
 
