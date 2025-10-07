@@ -48,7 +48,7 @@ public class UnderlayNetworking {
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
 			ServerPlayerEntity player = context.player();
-			ServerWorld world = (ServerWorld) player.getWorld();
+			ServerWorld world = player.getEntityWorld();
 			BlockPos pos = payload.pos();
 
 			if (!world.canEntityModifyAt(player, pos)) {
@@ -69,7 +69,7 @@ public class UnderlayNetworking {
 
 		ServerPlayNetworking.registerGlobalReceiver(PickItemFromOverlayPayload.ID, (payload, context) -> {
 			ServerPlayerEntity player = context.player();
-			ServerWorld world = (ServerWorld) player.getWorld();
+			ServerWorld world = player.getEntityWorld();
 			BlockPos pos = payload.pos();
 
 			if (!world.canEntityModifyAt(player, pos)) {
@@ -104,7 +104,7 @@ public class UnderlayNetworking {
 	}
 
 	public static void syncOverlaysToPlayer(ServerPlayerEntity player) {
-		var world = player.getWorld();
+		var world = player.getEntityWorld();
 
 		Map<BlockPos, NbtCompound> tags = new HashMap<>();
 		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->

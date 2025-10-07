@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
@@ -26,10 +24,6 @@ public class UnderlayRenderer {
 
     private static long lastFullRefreshTime = 0;
     private static final long FULL_REFRESH_INTERVAL = 500;
-
-    public static void init() {
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlays);
-    }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         RENDER_CACHE.put(pos.toImmutable(), state);
@@ -72,16 +66,13 @@ public class UnderlayRenderer {
         }
     }
 
-    private static void renderOverlays(WorldRenderContext context) {
+    public static void renderOverlays() {
         MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || client.player == null) return;
         BlockRenderManager blockRenderer = client.getBlockRenderManager();
-        MatrixStack matrices = context.matrixStack();
-        VertexConsumerProvider vertexConsumers = context.consumers();
-        Vec3d cameraPos = context.camera().getPos();
-
-        if (vertexConsumers == null || context.world() == null || client.player == null) {
-            return;
-        }
+        MatrixStack matrices = new MatrixStack();
+        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
 
         checkForFullRefresh();
 
@@ -113,11 +104,12 @@ public class UnderlayRenderer {
             model.addParts(RANDOM, parts);
 
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, parts);
+            blockRenderer.renderBlock(state, pos, client.world, matrices, buffer, true, parts);
 
             matrices.pop();
         }
 
         matrices.pop();
+        vertexConsumers.draw();
     }
 }
