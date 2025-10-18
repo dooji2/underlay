@@ -3,7 +3,8 @@
 	"package": "com.dooji.underlay.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"BlockItemMixin"
+		"BlockItemMixin",
+		"DefaultMinecartControllerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
