@@ -7,9 +7,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
@@ -104,7 +102,15 @@ public class UnderlayRenderer {
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
+            int light = WorldRenderer.getLightmapCoordinates(context.world(), pos);
+            blockRenderer.renderBlockAsEntity(
+                    state,
+                    matrices,
+                    vertexConsumers,
+                    light,
+                    OverlayTexture.DEFAULT_UV
+            );
+            //blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
 
             matrices.pop();
         }
