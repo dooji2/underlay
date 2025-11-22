@@ -1,19 +1,23 @@
 package com.dooji.underlay.client;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.RenderTypeHelper;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.common.NeoForge;
@@ -79,6 +83,9 @@ public class UnderlayRenderer {
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         Vec3 cameraPos = client.gameRenderer.getMainCamera().getPosition();
+        RandomSource randomSource = RandomSource.create();
+        RandomSource renderTypeRandom = RandomSource.create();
+        Set<RenderType> usedRenderTypes = new HashSet<>();
 
         if (bufferSource == null || client.level == null || client.player == null) {
             return;
@@ -108,14 +115,25 @@ public class UnderlayRenderer {
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
-            int packedLight = LevelRenderer.getLightColor(client.level, pos);
-            int packedOverlay = OverlayTexture.NO_OVERLAY;
+            BakedModel model = blockRenderer.getBlockModel(state);
+            ModelData modelData = ModelData.EMPTY;
+            renderTypeRandom.setSeed(42L);
 
-            blockRenderer.renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay, ModelData.EMPTY, RenderType.cutoutMipped());
+            for (RenderType chunkRenderType : model.getRenderTypes(state, renderTypeRandom, modelData)) {
+                RenderType movingRenderType = RenderTypeHelper.getMovingBlockRenderType(chunkRenderType);
+                VertexConsumer vertexConsumer = bufferSource.getBuffer(movingRenderType);
+
+                blockRenderer.renderBatched(state, pos, client.level, poseStack, vertexConsumer, false, randomSource, modelData, chunkRenderType);
+                usedRenderTypes.add(movingRenderType);
+            }
+
             poseStack.popPose();
         }
 
-        bufferSource.endBatch(RenderType.cutoutMipped());
+        for (RenderType usedType : usedRenderTypes) {
+            bufferSource.endBatch(usedType);
+        }
+
         poseStack.popPose();
     }
 }
