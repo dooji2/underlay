@@ -8,8 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.irisshaders.iris.api.v0.IrisApi;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -27,6 +31,8 @@ public class UnderlayRenderer {
 
     private static long lastFullRefreshTime = 0;
     private static final long FULL_REFRESH_INTERVAL = 500;
+
+    private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
 
     public static void init() {
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlays);
@@ -73,12 +79,21 @@ public class UnderlayRenderer {
         }
     }
 
+    private static boolean isShadersActive() {
+        if (IS_IRIS_INSTALLED) {
+            return IrisHelper.isShaderPackInUse();
+        }
+
+        return false;
+    }
+
     private static void renderOverlays(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         BlockRenderManager blockRenderer = client.getBlockRenderManager();
         MatrixStack matrices = context.matrixStack();
         VertexConsumerProvider vertexConsumers = context.consumers();
         Vec3d cameraPos = context.camera().getPos();
+        boolean useEntityRendering = isShadersActive();
 
         if (vertexConsumers == null || context.world() == null || client.player == null) {
             return;
@@ -114,11 +129,26 @@ public class UnderlayRenderer {
             model.addParts(RANDOM, parts);
 
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, parts);
+            int light = WorldRenderer.getLightmapCoordinates(context.world(), pos);
+            if (useEntityRendering) {
+                blockRenderer.renderBlockAsEntity(
+                        state,
+                        matrices,
+                        vertexConsumers,
+                        light,
+                        OverlayTexture.DEFAULT_UV
+                );
+            } else blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, parts);
 
             matrices.pop();
         }
 
         matrices.pop();
+    }
+
+    private static class IrisHelper {
+        public static boolean isShaderPackInUse() {
+            return IrisApi.getInstance().isShaderPackInUse();
+        }
     }
 }
