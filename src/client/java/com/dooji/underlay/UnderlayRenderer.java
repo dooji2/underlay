@@ -5,18 +5,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.fabricmc.loader.api.FabricLoader;
+import net.irisshaders.iris.api.v0.IrisApi;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.render.model.BlockModelPart;
 import net.minecraft.client.render.model.BlockStateModel;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
+
+import org.jetbrains.annotations.Nullable;
 
 public class UnderlayRenderer {
     private static final Random RANDOM = Random.create();
@@ -24,6 +32,8 @@ public class UnderlayRenderer {
 
     private static long lastFullRefreshTime = 0;
     private static final long FULL_REFRESH_INTERVAL = 500;
+
+    private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         RENDER_CACHE.put(pos.toImmutable(), state);
@@ -66,13 +76,23 @@ public class UnderlayRenderer {
         }
     }
 
-    public static void renderOverlays() {
+    private static boolean isShadersActive() {
+        if (IS_IRIS_INSTALLED) {
+            return IrisHelper.isShaderPackInUse();
+        }
+
+        return false;
+    }
+
+    public static void renderOverlays(MatrixStack matrices, VertexConsumerProvider vertexConsumers, Camera camera, @Nullable ClientWorld world) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null) return;
+        if (world == null || client.player == null) {
+            return;
+        }
+
         BlockRenderManager blockRenderer = client.getBlockRenderManager();
-        MatrixStack matrices = new MatrixStack();
-        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
-        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
+        Vec3d cameraPos = camera.getPos();
+        boolean useEntityRendering = isShadersActive();
 
         checkForFullRefresh();
 
@@ -104,12 +124,31 @@ public class UnderlayRenderer {
             model.addParts(RANDOM, parts);
 
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            blockRenderer.renderBlock(state, pos, client.world, matrices, buffer, true, parts);
+            int light = WorldRenderer.getLightmapCoordinates(world, pos);
+            if (useEntityRendering) {
+                blockRenderer.renderBlockAsEntity(
+                        state,
+                        matrices,
+                        vertexConsumers,
+                        light,
+                        OverlayTexture.DEFAULT_UV
+                );
+            } else {
+                blockRenderer.renderBlock(state, pos, world, matrices, buffer, true, parts);
+            }
 
             matrices.pop();
         }
 
         matrices.pop();
-        vertexConsumers.draw();
+        if (vertexConsumers instanceof VertexConsumerProvider.Immediate immediate) {
+            immediate.draw();
+        }
+    }
+
+    private static class IrisHelper {
+        public static boolean isShaderPackInUse() {
+            return IrisApi.getInstance().isShaderPackInUse();
+        }
     }
 }
