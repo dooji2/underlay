@@ -120,6 +120,19 @@ repositories {
     // Put repositories for dependencies here
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
 
+    mavenLocal()
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
     // flatDir {
@@ -146,6 +159,9 @@ dependencies {
     // The group id is ignored when searching -- in this case, it is "blank"
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
+    compileOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
+    runtimeOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
+
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
@@ -156,6 +172,7 @@ dependencies {
 mixin {
     add sourceSets.main, 'mixins.underlay.refmap.json'
     config 'mixins.underlay.json'
+    config 'mixins.underlay.jade.json'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
