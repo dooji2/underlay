@@ -121,6 +121,9 @@ public class UnderlayRenderer {
 
             matrices.push();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+            matrices.translate(0.5, 0.5, 0.5);
+            matrices.scale(1.0001f, 1.0001f, 1.0001f);
+            matrices.translate(-0.5, -0.5, -0.5);
 
             BlockStateModel model = blockRenderer.getModels().getModel(state);
             List<BlockModelPart> parts = new ArrayList<>();
