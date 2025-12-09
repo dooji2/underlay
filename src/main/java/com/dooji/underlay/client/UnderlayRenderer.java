@@ -114,6 +114,9 @@ public class UnderlayRenderer {
 
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+            poseStack.translate(0.5, 0.5, 0.5);
+            poseStack.scale(1.0001f, 1.0001f, 1.0001f);
+            poseStack.translate(-0.5, -0.5, -0.5);
 
             BakedModel model = blockRenderer.getBlockModel(state);
             ModelData modelData = ModelData.EMPTY;
