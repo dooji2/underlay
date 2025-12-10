@@ -90,8 +90,6 @@ public class UnderlayRenderer {
 
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
-        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
-        buffer.setTranslation(-dx, -dy, -dz);
 
         for (Map.Entry<BlockPos, IBlockState> entry : RENDER_CACHE.entrySet()) {
             BlockPos pos = entry.getKey();
@@ -116,11 +114,20 @@ public class UnderlayRenderer {
                 continue;
             }
 
+            GlStateManager.pushMatrix();
+            GlStateManager.translate(-dx, -dy, -dz);
+            GlStateManager.translate(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            GlStateManager.scale(1.001f, 1.001f, 1.001f);
+            GlStateManager.translate(-pos.getX() - 0.5, -pos.getY() - 0.5, -pos.getZ() - 0.5);
+
+            buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
             dispatcher.renderBlock(state, pos, client.world, buffer);
+            tessellator.draw();
+            buffer.setTranslation(0, 0, 0);
+
+            GlStateManager.popMatrix();
         }
 
-        tessellator.draw();
-        buffer.setTranslation(0, 0, 0);
         client.entityRenderer.disableLightmap();
         ForgeHooksClient.setRenderLayer(null);
         GlStateManager.shadeModel(prevShade);
