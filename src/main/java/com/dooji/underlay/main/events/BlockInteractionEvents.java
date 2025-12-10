@@ -96,7 +96,7 @@ public class BlockInteractionEvents {
         ItemBlock blockItem = (ItemBlock) stack.getItem();
         Block block = blockItem.getBlock();
 
-        RayTraceResult hit = player.rayTrace(player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1.0F);
+        RayTraceResult hit = rayTraceFromPlayer(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1.0F);
         if (hit == null || hit.typeOfHit != RayTraceResult.Type.BLOCK || hit.getBlockPos() == null) {
             return;
         }
@@ -164,5 +164,12 @@ public class BlockInteractionEvents {
         player.swingArm(EnumHand.MAIN_HAND);
 
         return true;
+    }
+
+    private static RayTraceResult rayTraceFromPlayer(EntityPlayer player, double reach, float partialTicks) {
+        Vec3d eye = player.getPositionEyes(partialTicks);
+        Vec3d look = player.getLook(partialTicks);
+        Vec3d end = eye.addVector(look.x * reach, look.y * reach, look.z * reach);
+        return player.world.rayTraceBlocks(eye, end, false, true, false);
     }
 }
