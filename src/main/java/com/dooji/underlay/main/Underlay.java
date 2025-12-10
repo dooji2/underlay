@@ -11,13 +11,14 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
-@Mod(modid = Underlay.MOD_ID, name = "Underlay", version = "0.9.9")
+@Mod(modid = Underlay.MOD_ID, name = "Underlay", version = "1.0.0")
 public class Underlay {
     public static final String MOD_ID = "underlay";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        UnderlayConfig.load();
         UnderlayNetworking.init();
     }
 

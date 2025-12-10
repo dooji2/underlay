@@ -15,7 +15,7 @@ import net.minecraft.block.BlockTrapDoor;
 
 public class UnderlayApi {
     static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
-    static final Set<Block> CUSTOM_BLOCKS_DP = ConcurrentHashMap.newKeySet();
+    static final Set<Block> CUSTOM_BLOCKS_CONFIG = ConcurrentHashMap.newKeySet();
 
     public static void registerOverlayBlock(Block block) {
         if (block == null) {
@@ -25,12 +25,12 @@ public class UnderlayApi {
         CUSTOM_BLOCKS.add(block);
     }
 
-    static void registerDatapackOverlayBlock(Block block) {
+    static void registerConfigOverlayBlock(Block block) {
         if (block == null) {
             return;
         }
 
-        CUSTOM_BLOCKS_DP.add(block);
+        CUSTOM_BLOCKS_CONFIG.add(block);
     }
 
     public static boolean isOverlayBlock(Block block) {
@@ -38,7 +38,7 @@ public class UnderlayApi {
             return false;
         }
 
-        if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block)) {
+        if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_CONFIG.contains(block)) {
             return true;
         }
 
