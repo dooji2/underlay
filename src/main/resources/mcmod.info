@@ -1,0 +1,16 @@
+[
+{
+  "modid": "${mod_id}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "version": "${mod_version}",
+  "mcversion": "${minecraft_version}",
+  "url": "https://modrinth.com/mod/underlay",
+  "updateUrl": "",
+  "authorList": ["${mod_authors}"],
+  "credits": "",
+  "logoFile": "assets/${mod_id}/icon.png",
+  "screenshots": [],
+  "dependencies": []
+}
+]

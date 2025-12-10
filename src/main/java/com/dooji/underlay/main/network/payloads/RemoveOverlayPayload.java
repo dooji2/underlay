@@ -1,14 +1,34 @@
 package com.dooji.underlay.main.network.payloads;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
 
-public record RemoveOverlayPayload(BlockPos pos) {
-    public static void write(RemoveOverlayPayload message, FriendlyByteBuf buf) {
-        buf.writeBlockPos(message.pos);
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+
+public class RemoveOverlayPayload implements IMessage {
+    private BlockPos pos;
+
+    public RemoveOverlayPayload(BlockPos pos) {
+        this.pos = pos;
     }
 
-    public static RemoveOverlayPayload read(FriendlyByteBuf buf) {
-        return new RemoveOverlayPayload(buf.readBlockPos());
+    public RemoveOverlayPayload() {
+    }
+
+    public BlockPos pos() {
+        return pos;
+    }
+
+    @Override
+    public void toBytes(ByteBuf byteBuf) {
+        PacketBuffer buf = new PacketBuffer(byteBuf);
+        buf.writeBlockPos(pos);
+    }
+
+    @Override
+    public void fromBytes(ByteBuf byteBuf) {
+        PacketBuffer buf = new PacketBuffer(byteBuf);
+        pos = buf.readBlockPos();
     }
 }

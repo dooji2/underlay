@@ -4,76 +4,76 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.LevelResource;
-import net.minecraft.core.BlockPos;
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTUtil;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 
 public class UnderlayPersistenceHandler {
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
 
-    private static String getSaveFileName(Level world) {
-        String dimensionId = world.dimension().location().toString();
-        if ("minecraft:overworld".equals(dimensionId)) {
+    private static String getSaveFileName(World world) {
+        int dimensionId = world.provider.getDimension();
+        if (dimensionId == 0) {
             return "underlays.dat";
         }
 
-        return "underlays_" + dimensionId.replace(':', '_') + ".dat";
+        return "underlays_" + dimensionId + ".dat";
     }
 
-    public static void saveOverlays(Level world, Map<BlockPos, BlockState> overlays) {
+    public static void saveOverlays(World world, Map<BlockPos, IBlockState> overlays) {
         if (world == null || overlays == null) {
-            Underlay.LOGGER.warn("Attempted to save overlays with null parameters");
             return;
         }
 
-        if (world.isClientSide() || !(world instanceof ServerLevel)) {
+        if (world.isRemote || !(world instanceof WorldServer)) {
             return;
         }
 
         for (int attempt = 0; attempt < MAX_OVERLAY_SAVE_ATTEMPTS; attempt++) {
             try {
-                CompoundTag rootTag = new CompoundTag();
-                ListTag overlayList = new ListTag();
+                NBTTagCompound rootTag = new NBTTagCompound();
+                NBTTagList overlayList = new NBTTagList();
 
-                for (Map.Entry<BlockPos, BlockState> entry : overlays.entrySet()) {
+                for (Map.Entry<BlockPos, IBlockState> entry : overlays.entrySet()) {
                     BlockPos pos = entry.getKey();
-                    BlockState state = entry.getValue();
+                    IBlockState state = entry.getValue();
 
-                    CompoundTag overlayTag = new CompoundTag();
-                    overlayTag.putInt("x", pos.getX());
-                    overlayTag.putInt("y", pos.getY());
-                    overlayTag.putInt("z", pos.getZ());
-                    overlayTag.put("state", NbtUtils.writeBlockState(state));
+                    NBTTagCompound overlayTag = new NBTTagCompound();
+                    overlayTag.setInteger("x", pos.getX());
+                    overlayTag.setInteger("y", pos.getY());
+                    overlayTag.setInteger("z", pos.getZ());
+                    overlayTag.setTag("state", NBTUtil.writeBlockState(new NBTTagCompound(), state));
+                    overlayTag.setInteger("stateId", Block.getStateId(state));
 
-                    overlayList.add(overlayTag);
+                    overlayList.appendTag(overlayTag);
                 }
 
-                rootTag.put("overlays", overlayList);
+                rootTag.setTag("overlays", overlayList);
 
-                ServerLevel serverWorld = (ServerLevel) world;
-                Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
+                WorldServer serverWorld = (WorldServer) world;
+                WorldServer rootWorld = serverWorld.getMinecraftServer().getWorld(0);
+                File worldDir = rootWorld != null ? rootWorld.getSaveHandler().getWorldDirectory() : serverWorld.getSaveHandler().getWorldDirectory();
+                File saveDir = new File(worldDir, "data");
                 String fileName = getSaveFileName(world);
-                File saveFile = saveDir.resolve(fileName).toFile();
+                File saveFile = new File(saveDir, fileName);
 
-                saveDir.toFile().mkdirs();
+                saveDir.mkdirs();
 
-                try (FileOutputStream fos = new FileOutputStream(saveFile)) {
-                    NbtIo.writeCompressed(rootTag, fos);
-                    break;
-                }
+                FileOutputStream fos = new FileOutputStream(saveFile);
+                CompressedStreamTools.writeCompressed(rootTag, fos);
+                fos.close();
+                break;
             } catch (IOException e) {
-                Underlay.LOGGER.error("Failed to save overlays (Attempt " + (attempt +1) + ")", e);
+                Underlay.LOGGER.error("Failed to save overlays (Attempt " + (attempt + 1) + ")", e);
 
                 try {
                     Thread.sleep(100 * (attempt + 1));
@@ -85,59 +85,61 @@ public class UnderlayPersistenceHandler {
         }
     }
 
-    public static Map<BlockPos, BlockState> loadOverlays(Level world) {
-        Map<BlockPos, BlockState> overlays = new HashMap<>();
+    public static Map<BlockPos, IBlockState> loadOverlays(World world) {
+        Map<BlockPos, IBlockState> overlays = new HashMap<BlockPos, IBlockState>();
 
         if (world == null) {
-            Underlay.LOGGER.warn("Attempted to load overlays with null world");
             return overlays;
         }
 
-        if (world.isClientSide() || !(world instanceof ServerLevel)) {
+        if (world.isRemote || !(world instanceof WorldServer)) {
             return overlays;
         }
 
         try {
-            ServerLevel serverWorld = (ServerLevel) world;
-            Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
+            WorldServer serverWorld = (WorldServer) world;
+            WorldServer rootWorld = serverWorld.getMinecraftServer().getWorld(0);
+            File worldDir = rootWorld != null ? rootWorld.getSaveHandler().getWorldDirectory() : serverWorld.getSaveHandler().getWorldDirectory();
+            File saveDir = new File(worldDir, "data");
             String fileName = getSaveFileName(world);
-            File saveFile = saveDir.resolve(fileName).toFile();
+            File saveFile = new File(saveDir, fileName);
 
             if (!saveFile.exists()) {
-                Underlay.LOGGER.info("No existing overlay save file found");
                 return overlays;
             }
 
-            try (FileInputStream fis = new FileInputStream(saveFile)) {
-                CompoundTag rootTag = NbtIo.readCompressed(fis);
+            FileInputStream fis = new FileInputStream(saveFile);
+            NBTTagCompound rootTag = CompressedStreamTools.readCompressed(fis);
+            fis.close();
 
-                if (rootTag.contains("overlays")) {
-                    ListTag overlayList = rootTag.getList("overlays", 10);
+            if (rootTag.hasKey("overlays")) {
+                NBTTagList overlayList = rootTag.getTagList("overlays", 10);
 
-                    for (int i = 0; i < overlayList.size(); i++) {
-                        CompoundTag overlayTag = overlayList.getCompound(i);
+                for (int i = 0; i < overlayList.tagCount(); i++) {
+                    NBTTagCompound overlayTag = overlayList.getCompoundTagAt(i);
 
-                        int x = overlayTag.getInt("x");
-                        int y = overlayTag.getInt("y");
-                        int z = overlayTag.getInt("z");
-                        BlockPos pos = new BlockPos(x, y, z);
-                        BlockState state = null;
+                    int x = overlayTag.getInteger("x");
+                    int y = overlayTag.getInteger("y");
+                    int z = overlayTag.getInteger("z");
+                    BlockPos pos = new BlockPos(x, y, z);
+                    IBlockState state = null;
 
-                        if (overlayTag.contains("state")) {
-                            try {
-                                CompoundTag stateTag = overlayTag.getCompound("state");
-                                state = NbtUtils.readBlockState(serverWorld.holderLookup(Registries.BLOCK), stateTag);
-                            } catch (Exception e) {
-                                Underlay.LOGGER.warn("Failed to read block state from NBT", e);
-                            }
-                        }
+                    if (overlayTag.hasKey("stateId")) {
+                        state = Block.getStateById(overlayTag.getInteger("stateId"));
+                    }
 
-                        if (state != null) {
-                            overlays.put(pos, state);
+                    if (state == null && overlayTag.hasKey("state")) {
+                        try {
+                            NBTTagCompound stateTag = overlayTag.getCompoundTag("state");
+                            state = NBTUtil.readBlockState(stateTag);
+                        } catch (Exception e) {
+                            Underlay.LOGGER.warn("Failed to read block state from NBT", e);
                         }
                     }
 
-                    Underlay.LOGGER.info("Loaded " + overlays.size() + " overlays");
+                    if (state != null) {
+                        overlays.put(pos, state);
+                    }
                 }
             }
         } catch (IOException e) {

@@ -1,20 +1,20 @@
 package com.dooji.underlay.client;
 
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.util.math.BlockPos;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-
 public class UnderlayManagerClient {
-    private static final Map<BlockPos, BlockState> OVERLAYS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, IBlockState> OVERLAYS = new ConcurrentHashMap<BlockPos, IBlockState>();
 
-    public static void sync(Map<BlockPos, BlockState> stateMap) {
+    public static void sync(Map<BlockPos, IBlockState> stateMap) {
         OVERLAYS.clear();
         OVERLAYS.putAll(stateMap);
     }
 
-    public static void syncAdd(BlockPos pos, BlockState state) {
+    public static void syncAdd(BlockPos pos, IBlockState state) {
         OVERLAYS.put(pos, state);
     }
 
@@ -26,11 +26,11 @@ public class UnderlayManagerClient {
         return OVERLAYS.containsKey(pos);
     }
 
-    public static BlockState getOverlay(BlockPos pos) {
+    public static IBlockState getOverlay(BlockPos pos) {
         return OVERLAYS.get(pos);
     }
 
-    public static Map<BlockPos, BlockState> getAll() {
+    public static Map<BlockPos, IBlockState> getAll() {
         return OVERLAYS;
     }
 

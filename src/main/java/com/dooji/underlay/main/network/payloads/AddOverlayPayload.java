@@ -1,18 +1,63 @@
 package com.dooji.underlay.main.network.payloads;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
 
-public record AddOverlayPayload(BlockPos pos, CompoundTag stateTag) {
-    public static void write(AddOverlayPayload message, FriendlyByteBuf buf) {
-        buf.writeBlockPos(message.pos);
-        buf.writeNbt(message.stateTag);
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+
+import java.io.IOException;
+
+public class AddOverlayPayload implements IMessage {
+    private BlockPos pos;
+    private NBTTagCompound stateTag;
+    private int stateId;
+
+    public AddOverlayPayload(BlockPos pos, NBTTagCompound stateTag, int stateId) {
+        this.pos = pos;
+        this.stateTag = stateTag;
+        this.stateId = stateId;
     }
 
-    public static AddOverlayPayload read(FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        CompoundTag tag = buf.readNbt();
-        return new AddOverlayPayload(pos, tag);
+    public AddOverlayPayload() {
+    }
+
+    public BlockPos pos() {
+        return pos;
+    }
+
+    public NBTTagCompound stateTag() {
+        return stateTag;
+    }
+
+    public int stateId() {
+        return stateId;
+    }
+
+    @Override
+    public void toBytes(ByteBuf byteBuf) {
+        PacketBuffer buf = new PacketBuffer(byteBuf);
+        buf.writeBlockPos(pos);
+        buf.writeCompoundTag(stateTag);
+        buf.writeVarInt(stateId);
+    }
+
+    @Override
+    public void fromBytes(ByteBuf byteBuf) {
+        PacketBuffer buf = new PacketBuffer(byteBuf);
+        pos = buf.readBlockPos();
+
+        try {
+            stateTag = buf.readCompoundTag();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (buf.readableBytes() > 0) {
+            stateId = buf.readVarInt();
+        } else {
+            stateId = -1;
+        }
     }
 }

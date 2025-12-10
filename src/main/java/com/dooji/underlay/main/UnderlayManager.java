@@ -1,69 +1,73 @@
 package com.dooji.underlay.main;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.dooji.underlay.main.network.UnderlayNetworking;
 
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.core.BlockPos;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
+import net.minecraft.init.Blocks;
 
 public class UnderlayManager {
-    private static final Map<String, Map<BlockPos, BlockState>> OVERLAYS = new ConcurrentHashMap<>();
+    private static final Map<String, Map<BlockPos, IBlockState>> OVERLAYS = new ConcurrentHashMap<String, Map<BlockPos, IBlockState>>();
 
-    public static void addOverlay(ServerPlayer player, Level world, BlockPos pos, BlockState blockState) {
+    public static void addOverlay(EntityPlayerMP player, World world, BlockPos pos, IBlockState blockState) {
         if (world == null || pos == null || blockState == null) {
-            Underlay.LOGGER.warn("Attempted to add overlay with null parameters");
             return;
         }
 
         if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
-            Underlay.LOGGER.warn("Attempted to add non-overlay block as overlay: " + blockState);
             return;
         }
 
         String dimensionKey = getDimensionKey(world);
-        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.computeIfAbsent(dimensionKey, k -> new ConcurrentHashMap<>());
+        Map<BlockPos, IBlockState> worldOverlays = OVERLAYS.computeIfAbsent(dimensionKey, k -> new ConcurrentHashMap<BlockPos, IBlockState>());
 
         if (worldOverlays.containsKey(pos)) {
-            BlockState old = worldOverlays.get(pos);
+            IBlockState old = worldOverlays.get(pos);
             if (!player.isCreative()) {
-                world.addFreshEntity(new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock())));
+                ItemStack stack = createStackForState(old, world, pos, player);
+                if (!stack.isEmpty()) {
+                    world.spawnEntity(new EntityItem(world, pos.getX(), pos.getY(), pos.getZ(), stack));
+                }
             }
         }
 
         try {
-            worldOverlays.put(pos.immutable(), blockState);
-            UnderlayNetworking.broadcastAdd((ServerLevel)world, pos);
+            worldOverlays.put(pos, blockState);
+            UnderlayNetworking.broadcastAdd((WorldServer) world, pos);
 
-            if (!world.isClientSide() && world instanceof ServerLevel) {
+            if (!world.isRemote && world instanceof WorldServer) {
                 UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
             }
         } catch (Exception e) {
-            Underlay.LOGGER.error(("Failed to add overlay at ") + pos, e);
+            Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
         }
     }
 
-    public static boolean removeOverlay(Level world, BlockPos pos) {
+    public static boolean removeOverlay(World world, BlockPos pos) {
         if (world == null || pos == null) {
-            Underlay.LOGGER.warn("Attempted to remove overlay with null parameters");
             return false;
         }
 
         String dimensionKey = getDimensionKey(world);
-        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.get(dimensionKey);
+        Map<BlockPos, IBlockState> worldOverlays = OVERLAYS.get(dimensionKey);
 
         try {
             if (worldOverlays != null && worldOverlays.containsKey(pos)) {
                 worldOverlays.remove(pos);
 
-                if (!world.isClientSide() && world instanceof ServerLevel) {
+                if (!world.isRemote && world instanceof WorldServer) {
                     UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
                 }
 
@@ -76,42 +80,51 @@ public class UnderlayManager {
         return false;
     }
 
-    public static boolean hasOverlay(Level world, BlockPos pos) {
+    public static boolean hasOverlay(World world, BlockPos pos) {
         String dimensionKey = getDimensionKey(world);
-        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.get(dimensionKey);
+        Map<BlockPos, IBlockState> worldOverlays = OVERLAYS.get(dimensionKey);
 
         return worldOverlays != null && worldOverlays.containsKey(pos);
     }
 
-    public static BlockState getOverlay(Level world, BlockPos pos) {
+    public static IBlockState getOverlay(World world, BlockPos pos) {
         String dimensionKey = getDimensionKey(world);
-        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.get(dimensionKey);
+        Map<BlockPos, IBlockState> worldOverlays = OVERLAYS.get(dimensionKey);
 
         if (worldOverlays != null && worldOverlays.containsKey(pos)) {
             return worldOverlays.get(pos);
         }
 
-        return Blocks.AIR.defaultBlockState();
+        return Blocks.AIR.getDefaultState();
     }
 
-    public static Map<BlockPos, BlockState> getOverlaysFor(Level world) {
-        String key = world.dimension().location().toString();
-        return OVERLAYS.getOrDefault(key, Map.of());
+    public static Map<BlockPos, IBlockState> getOverlaysFor(World world) {
+        String key = getDimensionKey(world);
+        Map<BlockPos, IBlockState> map = OVERLAYS.get(key);
+        return map == null ? Collections.<BlockPos, IBlockState>emptyMap() : map;
     }
 
-    public static void loadOverlays(Level world) {
-        if (world.isClientSide() || !(world instanceof ServerLevel)) {
+    public static void loadOverlays(World world) {
+        if (world.isRemote || !(world instanceof WorldServer)) {
             return;
         }
 
         String dimensionKey = getDimensionKey(world);
-        Map<BlockPos, BlockState> worldOverlays = UnderlayPersistenceHandler.loadOverlays(world);
+        Map<BlockPos, IBlockState> worldOverlays = UnderlayPersistenceHandler.loadOverlays(world);
 
         OVERLAYS.put(dimensionKey, worldOverlays);
-        Underlay.LOGGER.info("Loaded " + worldOverlays.size() + " overlays for dimension " + dimensionKey);
     }
 
-    private static String getDimensionKey(Level world) {
-        return world.dimension().location().toString();
+    private static String getDimensionKey(World world) {
+        return Integer.toString(world.provider.getDimension());
+    }
+
+    public static ItemStack createStackForState(IBlockState state, World world, BlockPos pos, EntityPlayerMP player) {
+        ItemStack stack = state.getBlock().getPickBlock(state, new RayTraceResult(new Vec3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), EnumFacing.UP, pos), world, pos, player);
+        if (stack.isEmpty()) {
+            stack = new ItemStack(state.getBlock(), 1, state.getBlock().damageDropped(state));
+        }
+
+        return stack;
     }
 }

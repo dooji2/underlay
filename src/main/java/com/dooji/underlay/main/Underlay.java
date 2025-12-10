@@ -1,60 +1,30 @@
 package com.dooji.underlay.main;
 
 import com.dooji.underlay.main.network.UnderlayNetworking;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.level.block.Block;
 
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import net.minecraft.world.WorldServer;
+
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-@Mod(Underlay.MOD_ID)
+@Mod(modid = Underlay.MOD_ID, name = "Underlay", version = "0.9.9")
 public class Underlay {
     public static final String MOD_ID = "underlay";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
-    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(Registries.BLOCK, ResourceLocation.tryBuild(MOD_ID, "overlay"));
-    public static final TagKey<Block> EXCLUDE_TAG = TagKey.create(Registries.BLOCK, ResourceLocation.tryBuild(MOD_ID, "exclude"));
-
-    public Underlay() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        modEventBus.addListener(this::commonSetup);
-        MinecraftForge.EVENT_BUS.register(this);
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        UnderlayNetworking.init();
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(UnderlayNetworking::init);
-    }
-
-    @SubscribeEvent
-    public void onServerStarted(ServerStartedEvent event) {
-        for (ServerLevel world : event.getServer().getAllLevels()) {
-            LOGGER.info("Loading overlays for world: " + world.dimension().location());
+    @Mod.EventHandler
+    public void onServerStarting(FMLServerStartingEvent event) {
+        for (WorldServer world : event.getServer().worlds) {
             UnderlayManager.loadOverlays(world);
-            reloadDatapackBlocks(world);
         }
-    }
-
-    private static void reloadDatapackBlocks(ServerLevel world) {
-        UnderlayApi.CUSTOM_BLOCKS_DP.clear();
-        var blocks = world.registryAccess().registryOrThrow(Registries.BLOCK);
-
-        blocks.getTag(OVERLAY_TAG).ifPresent(tag -> tag.forEach(entry -> {
-            Block block = entry.value();
-            if (!blocks.getOrCreateTag(EXCLUDE_TAG).contains(entry)) {
-                UnderlayApi.registerDatapackOverlayBlock(block);
-            }
-        }));
     }
 }

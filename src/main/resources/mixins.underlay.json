@@ -1,15 +1,16 @@
 {
   "required": true,
   "package": "com.dooji.underlay.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_8",
   "refmap": "mixins.underlay.refmap.json",
   "mixins": [],
   "client": [
+    "RenderGlobalMixin",
     "MultiPlayerGameModeAccessor",
     "MinecraftMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   },
-  "minVersion": "0.8"
+  "minVersion": "0.7.11"
 }

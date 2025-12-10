@@ -1,14 +1,17 @@
 package com.dooji.underlay.main;
 
 import java.util.Set;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.block.*;
-
-import static com.dooji.underlay.main.Underlay.EXCLUDE_TAG;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockButtonStone;
+import net.minecraft.block.BlockButtonWood;
+import net.minecraft.block.BlockCarpet;
+import net.minecraft.block.BlockPressurePlate;
+import net.minecraft.block.BlockPressurePlateWeighted;
+import net.minecraft.block.BlockRailBase;
+import net.minecraft.block.BlockSlab;
+import net.minecraft.block.BlockTrapDoor;
 
 public class UnderlayApi {
     static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
@@ -39,18 +42,13 @@ public class UnderlayApi {
             return true;
         }
 
-        Optional<HolderSet.Named<Block>> maybeExcluded = BuiltInRegistries.BLOCK.getTag(EXCLUDE_TAG);
-        if (maybeExcluded.map(named ->
-                named.stream().anyMatch(holder -> holder.value() == block)
-        ).orElse(false)) {
-            return false;
-        }
-
-        return block instanceof CarpetBlock
-                || block instanceof ButtonBlock
-                || block instanceof TrapDoorBlock
-                || block instanceof PressurePlateBlock
-                || block instanceof SlabBlock
-                || block instanceof RailBlock;
+        return block instanceof BlockCarpet
+                || block instanceof BlockButtonStone
+                || block instanceof BlockButtonWood
+                || block instanceof BlockTrapDoor
+                || block instanceof BlockPressurePlate
+                || block instanceof BlockPressurePlateWeighted
+                || block instanceof BlockSlab
+                || block instanceof BlockRailBase;
     }
 }

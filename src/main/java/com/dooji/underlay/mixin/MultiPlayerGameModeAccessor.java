@@ -1,14 +1,14 @@
 package com.dooji.underlay.mixin;
 
-import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.multiplayer.PlayerControllerMP;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(MultiPlayerGameMode.class)
+@Mixin(PlayerControllerMP.class)
 public interface MultiPlayerGameModeAccessor {
-    @Accessor("destroyDelay")
+    @Accessor("blockHitDelay")
     void setBlockBreakingCooldown(int value);
 
-    @Accessor("destroyDelay")
+    @Accessor("blockHitDelay")
     int getBlockBreakingCooldown();
 }
