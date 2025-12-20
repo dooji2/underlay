@@ -2,19 +2,18 @@ package com.dooji.underlay.network.payloads;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
 
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
+public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<SyncOverlaysPayload> ID =
+        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("underlay", "sync_overlays"));
 
-public record SyncOverlaysPayload(Map<BlockPos, NbtCompound> tags) implements CustomPayload {
-    public static final CustomPayload.Id<SyncOverlaysPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "sync_overlays"));
-
-    public static final PacketCodec<PacketByteBuf, SyncOverlaysPayload> CODEC = PacketCodec.ofStatic(
+    public static final StreamCodec<FriendlyByteBuf, SyncOverlaysPayload> CODEC = StreamCodec.of(
         (buf, payload) -> {
             buf.writeVarInt(payload.tags().size());
             
@@ -25,11 +24,11 @@ public record SyncOverlaysPayload(Map<BlockPos, NbtCompound> tags) implements Cu
         },
         buf -> {
             int count = buf.readVarInt();
-            Map<BlockPos, NbtCompound> map = new HashMap<>(count);
+            Map<BlockPos, CompoundTag> map = new HashMap<>(count);
 
             for (int i = 0; i < count; i++) {
                 BlockPos pos = buf.readBlockPos();
-                NbtCompound tag = buf.readNbt();
+                CompoundTag tag = buf.readNbt();
                 map.put(pos, tag);
             }
 
@@ -38,7 +37,7 @@ public record SyncOverlaysPayload(Map<BlockPos, NbtCompound> tags) implements Cu
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() {
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

@@ -1,6 +1,6 @@
 package com.dooji.underlay.jade;
 
-import net.minecraft.block.Block;
+import net.minecraft.world.level.block.Block;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
 import snownee.jade.api.IWailaPlugin;

@@ -2,12 +2,11 @@ package com.dooji.underlay.jade;
 
 import com.dooji.underlay.Underlay;
 import com.dooji.underlay.UnderlayRaycast;
-
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.BlockHitResult;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
@@ -18,7 +17,7 @@ public enum UnderlayComponentProvider implements IBlockComponentProvider {
 
     @Override
     public Identifier getUid() {
-        return Identifier.of(Underlay.MOD_ID, "overlay");
+        return Identifier.fromNamespaceAndPath(Underlay.MOD_ID, "overlay");
     }
 
     @Override
@@ -29,11 +28,11 @@ public enum UnderlayComponentProvider implements IBlockComponentProvider {
     @Override
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         BlockPos pos = accessor.getPosition();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
-        BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+        BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
         if (hit != null && hit.getBlockPos().equals(pos)) {
-            tooltip.append(Text.translatable("block.underlay.overlay"));
+            tooltip.append(Component.translatable("block.underlay.overlay"));
         }
     }
 }

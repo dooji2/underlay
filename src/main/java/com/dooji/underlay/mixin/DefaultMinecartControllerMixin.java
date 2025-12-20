@@ -1,42 +1,40 @@
 package com.dooji.underlay.mixin;
 
 import com.dooji.underlay.UnderlayManager;
-
-import net.minecraft.block.AbstractRailBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.vehicle.DefaultMinecartController;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.vehicle.minecart.OldMinecartBehavior;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(DefaultMinecartController.class)
+@Mixin(OldMinecartBehavior.class)
 public abstract class DefaultMinecartControllerMixin {
     @Redirect(
             method = {
                     "tick",
-                    "moveOnRail",
-                    "simulateMovement",
-                    "snapPositionToRail"
+                    "moveAlongTrack",
+                    "getPosOffs",
+                    "getPos"
             },
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"
+                    target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"
             )
     )
-    private BlockState redirectGetBlockState(World world, BlockPos pos) {
+    private BlockState redirectGetBlockState(Level world, BlockPos pos) {
         BlockState originalState = world.getBlockState(pos);
 
-        if (originalState.getBlock() instanceof AbstractRailBlock) {
+        if (originalState.getBlock() instanceof BaseRailBlock) {
             return originalState;
         }
 
         if (UnderlayManager.hasOverlay(world, pos)) {
             BlockState overlayState = UnderlayManager.getOverlay(world, pos);
 
-            if (overlayState != null && overlayState.getBlock() instanceof AbstractRailBlock) {
+            if (overlayState != null && overlayState.getBlock() instanceof BaseRailBlock) {
                 return overlayState;
             }
         }

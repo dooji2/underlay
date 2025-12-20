@@ -11,16 +11,15 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.nbt.NbtHelper;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.sounds.SoundSource;
 
 public class UnderlayClient implements ClientModInitializer {
 	@Override
@@ -28,13 +27,13 @@ public class UnderlayClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 
 		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (payload, context) -> {
-			MinecraftClient client = MinecraftClient.getInstance();
+			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
-				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
+				HolderLookup<Block> lookup = client.getConnection().registryAccess().lookupOrThrow(Registries.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
 					.collect(java.util.stream.Collectors.toMap(
 						Map.Entry::getKey,
-						e -> NbtHelper.toBlockState(lookup, e.getValue())
+						e -> NbtUtils.readBlockState(lookup, e.getValue())
 					));
 
 				UnderlayManagerClient.sync(map);
@@ -45,12 +44,12 @@ public class UnderlayClient implements ClientModInitializer {
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(AddOverlayPayload.ID, (payload, context) -> {
-			MinecraftClient client = MinecraftClient.getInstance();
+			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
-				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
+				HolderLookup<Block> lookup = client.getConnection().registryAccess().lookupOrThrow(Registries.BLOCK);
 
 				BlockPos pos = payload.pos();
-				BlockState state = NbtHelper.toBlockState(lookup, payload.stateTag());
+				BlockState state = NbtUtils.readBlockState(lookup, payload.stateTag());
 
 				UnderlayManagerClient.syncAdd(pos, state);
 				UnderlayRenderer.registerOverlay(pos, state);
@@ -58,14 +57,14 @@ public class UnderlayClient implements ClientModInitializer {
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
-			MinecraftClient client = MinecraftClient.getInstance();
+			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
 				BlockPos pos = payload.pos();
 				var state = UnderlayManagerClient.getOverlay(pos);
 
 				UnderlayRenderer.unregisterOverlay(pos);
 				UnderlayManagerClient.syncRemove(pos);
-				client.world.playSound(client.player, pos, state.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1f, 1f);
+				client.level.playSound(client.player, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1f, 1f);
 			});
 		});
 
@@ -76,33 +75,33 @@ public class UnderlayClient implements ClientModInitializer {
 		});
 	}
 
-	private void onClientTick(MinecraftClient client) {
-		if (client.player == null || client.world == null) return;
-		if (client.currentScreen != null) return;
+	private void onClientTick(Minecraft client) {
+		if (client.player == null || client.level == null) return;
+		if (client.screen != null) return;
 
 		handleContinuousBreaking(client);
 	}
 
-	private void handleContinuousBreaking(MinecraftClient client) {
-		if (client.options.attackKey.isPressed()) {
+	private void handleContinuousBreaking(Minecraft client) {
+		if (client.options.keyAttack.isDown()) {
 			BlockPos hit = findOverlayUnderCrosshair(client);
-			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+			ClientPlayerInteractionManagerAccessor playerInteraction = (ClientPlayerInteractionManagerAccessor) client.gameMode;
 			if (hit != null && playerInteraction.getBlockBreakingCooldown() == 0) {
 				breakOverlay(client, hit);
 			}
 		}
 	}
 
-	public static void breakOverlay(MinecraftClient client, BlockPos pos) {
-		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.interactionManager;
+	public static void breakOverlay(Minecraft client, BlockPos pos) {
+		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.gameMode;
 		ClientPlayNetworking.send(new RemoveOverlayPayload(pos));
 		interactionManager.setBlockBreakingCooldown(5);
 	}
 
-	public static BlockPos findOverlayUnderCrosshair(MinecraftClient client) {
+	public static BlockPos findOverlayUnderCrosshair(Minecraft client) {
 		if (client.player == null) return null;
 
-		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+		BlockHitResult overlayHit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
 		return overlayHit == null ? null : overlayHit.getBlockPos();
 	}
 }

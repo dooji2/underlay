@@ -8,28 +8,27 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtSizeTracker;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryEntryLookup;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.WorldSavePath;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.LevelResource;
 
 public class UnderlayPersistenceHandler {
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
 
-    private static String getSaveFileName(World world) {
-        String dimensionId = world.getRegistryKey().getValue().toString();
+    private static String getSaveFileName(Level world) {
+        String dimensionId = world.dimension().identifier().toString();
         if ("minecraft:overworld".equals(dimensionId)) {
             return "underlays.dat";
         }
@@ -37,32 +36,32 @@ public class UnderlayPersistenceHandler {
         return "underlays_" + dimensionId.replace(':', '_') + ".dat";
     }
 
-    public static void saveOverlays(World world, Map<BlockPos, BlockState> overlays) {
+    public static void saveOverlays(Level world, Map<BlockPos, BlockState> overlays) {
         if (world == null || overlays == null) {
             Underlay.LOGGER.warn("Attempted to save overlays with null parameters");
             return;
         }
 
-        if (world.isClient() || !(world instanceof ServerWorld)) {
+        if (world.isClientSide() || !(world instanceof ServerLevel)) {
             return;
         }
 
         for (int attempt = 0; attempt < MAX_OVERLAY_SAVE_ATTEMPTS; attempt++) {
             try {
-                NbtCompound rootTag = new NbtCompound();
-                NbtList overlayList = new NbtList();
+                CompoundTag rootTag = new CompoundTag();
+                ListTag overlayList = new ListTag();
 
                 for (Map.Entry<BlockPos, BlockState> entry : overlays.entrySet()) {
                     BlockPos pos = entry.getKey();
                     BlockState state = entry.getValue();
 
-                    NbtCompound overlayTag = new NbtCompound();
+                    CompoundTag overlayTag = new CompoundTag();
                     overlayTag.putInt("x", pos.getX());
                     overlayTag.putInt("y", pos.getY());
                     overlayTag.putInt("z", pos.getZ());
-                    overlayTag.put("state", NbtHelper.fromBlockState(state));
+                    overlayTag.put("state", NbtUtils.writeBlockState(state));
 
-                    Identifier blockId = Registries.BLOCK.getId(state.getBlock());
+                    Identifier blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
                     overlayTag.putString("block", blockId.toString());
 
                     overlayList.add(overlayTag);
@@ -70,8 +69,8 @@ public class UnderlayPersistenceHandler {
 
                 rootTag.put("overlays", overlayList);
 
-                ServerWorld serverWorld = (ServerWorld) world;
-                Path saveDir = serverWorld.getServer().getSavePath(WorldSavePath.ROOT).resolve("data");
+                ServerLevel serverWorld = (ServerLevel) world;
+                Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
                 String fileName = getSaveFileName(world);
                 File saveFile = saveDir.resolve(fileName).toFile();
 
@@ -94,7 +93,7 @@ public class UnderlayPersistenceHandler {
         }
     }
 
-    public static Map<BlockPos, BlockState> loadOverlays(World world) {
+    public static Map<BlockPos, BlockState> loadOverlays(Level world) {
         Map<BlockPos, BlockState> overlays = new HashMap<>();
         
         if (world == null) {
@@ -102,15 +101,15 @@ public class UnderlayPersistenceHandler {
             return overlays;
         }
 
-        if (world.isClient() || !(world instanceof ServerWorld)) {
+        if (world.isClientSide() || !(world instanceof ServerLevel)) {
             return overlays;
         }
 
         try {
-            ServerWorld serverWorld = (ServerWorld) world;
-            RegistryEntryLookup<Block> lookup = serverWorld.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
+            ServerLevel serverWorld = (ServerLevel) world;
+            HolderGetter<Block> lookup = serverWorld.registryAccess().lookupOrThrow(Registries.BLOCK);
             
-            Path saveDir = serverWorld.getServer().getSavePath(WorldSavePath.ROOT).resolve("data");
+            Path saveDir = serverWorld.getServer().getWorldPath(LevelResource.ROOT).resolve("data");
             String fileName = getSaveFileName(world);
             File saveFile = saveDir.resolve(fileName).toFile();
             
@@ -120,30 +119,30 @@ public class UnderlayPersistenceHandler {
             }
 
             try (FileInputStream fis = new FileInputStream(saveFile)) {
-                NbtCompound rootTag = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
+                CompoundTag rootTag = NbtIo.readCompressed(fis, NbtAccounter.unlimitedHeap());
                 
                 if (rootTag.contains("overlays")) {
-                    NbtList overlayList = rootTag.getListOrEmpty("overlays");
+                    ListTag overlayList = rootTag.getListOrEmpty("overlays");
 
                     for (int i = 0; i < overlayList.size(); i++) {
-                        NbtCompound overlayTag = overlayList.getCompoundOrEmpty(i);
+                        CompoundTag overlayTag = overlayList.getCompoundOrEmpty(i);
                         
-                        int x = overlayTag.getInt("x", 0);
-                        int y = overlayTag.getInt("y", 0);
-                        int z = overlayTag.getInt("z", 0);
-                        Optional<NbtCompound> optNbt = overlayTag.getCompound("state");
-                        NbtCompound stateTag = optNbt.orElse(new NbtCompound());
+                        int x = overlayTag.getIntOr("x", 0);
+                        int y = overlayTag.getIntOr("y", 0);
+                        int z = overlayTag.getIntOr("z", 0);
+                        Optional<CompoundTag> optNbt = overlayTag.getCompound("state");
+                        CompoundTag stateTag = optNbt.orElse(new CompoundTag());
                         BlockPos pos = new BlockPos(x, y, z);
                         BlockState state;
 
                         if (!stateTag.isEmpty()) {
-                            state = NbtHelper.toBlockState(lookup, stateTag);
+                            state = NbtUtils.readBlockState(lookup, stateTag);
                         } else {
-                            String blockIdString = overlayTag.getString("block", "");
+                            String blockIdString = overlayTag.getStringOr("block", "");
                             Identifier blockId = Identifier.tryParse(blockIdString);
 
                             if (blockId != null) {
-                                state = Registries.BLOCK.get(blockId).getDefaultState();
+                                state = BuiltInRegistries.BLOCK.getValue(blockId).defaultBlockState();
                             } else {
                                 Underlay.LOGGER.warn("Invalid block ID in overlay save: " + blockIdString);
                                 continue;

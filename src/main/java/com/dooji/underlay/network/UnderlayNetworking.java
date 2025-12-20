@@ -14,17 +14,16 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
-import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ItemScatterer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class UnderlayNetworking {
 	public static void init() {
@@ -47,11 +46,11 @@ public class UnderlayNetworking {
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
-			ServerPlayerEntity player = context.player();
-			ServerWorld world = player.getEntityWorld();
+			ServerPlayer player = context.player();
+			ServerLevel world = player.level();
 			BlockPos pos = payload.pos();
 
-			if (!world.canEntityModifyAt(player, pos)) {
+			if (!world.mayInteract(player, pos)) {
 				return;
 			}
 
@@ -60,7 +59,7 @@ public class UnderlayNetworking {
 				UnderlayManager.removeOverlay(world, pos);
 				
 				if (!player.isCreative()) {
-					ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
+					Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(old.getBlock()));
 				}
 
 				broadcastRemove(world, pos);
@@ -68,65 +67,65 @@ public class UnderlayNetworking {
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(PickItemFromOverlayPayload.ID, (payload, context) -> {
-			ServerPlayerEntity player = context.player();
-			ServerWorld world = player.getEntityWorld();
+			ServerPlayer player = context.player();
+			ServerLevel world = player.level();
 			BlockPos pos = payload.pos();
 
-			if (!world.canEntityModifyAt(player, pos)) {
+			if (!world.mayInteract(player, pos)) {
 				return;
 			}
 
 			if (UnderlayManager.hasOverlay(world, pos)) {
 				BlockState overlayState = UnderlayManager.getOverlay(world, pos);
-				ItemStack itemStack = overlayState.getPickStack(world, pos, player.isCreative());
+				ItemStack itemStack = overlayState.getCloneItemStack(world, pos, player.isCreative());
 				
 				if (!itemStack.isEmpty()) {
-					if (itemStack.isItemEnabled(world.getEnabledFeatures())) {
-						PlayerInventory playerInventory = player.getInventory();
-						int slotWithStack = playerInventory.getSlotWithStack(itemStack);
+					if (itemStack.isItemEnabled(world.enabledFeatures())) {
+						Inventory playerInventory = player.getInventory();
+						int slotWithStack = playerInventory.findSlotMatchingItem(itemStack);
 						
 						if (slotWithStack != -1) {
-							if (PlayerInventory.isValidHotbarIndex(slotWithStack)) {
+							if (Inventory.isHotbarSlot(slotWithStack)) {
 								playerInventory.setSelectedSlot(slotWithStack);
 							} else {
-								playerInventory.swapSlotWithHotbar(slotWithStack);
+								playerInventory.pickSlot(slotWithStack);
 							}
 						} else if (player.isCreative()) {
-							playerInventory.swapStackWithHotbar(itemStack);
+							playerInventory.addAndPickItem(itemStack);
 						}
 
-						player.networkHandler.sendPacket(new UpdateSelectedSlotS2CPacket(playerInventory.getSelectedSlot()));
-						player.playerScreenHandler.sendContentUpdates();
+						player.connection.send(new ClientboundSetHeldSlotPacket(playerInventory.getSelectedSlot()));
+						player.inventoryMenu.broadcastChanges();
 					}
 				}
 			}
 		});
 	}
 
-	public static void syncOverlaysToPlayer(ServerPlayerEntity player) {
-		var world = player.getEntityWorld();
+	public static void syncOverlaysToPlayer(ServerPlayer player) {
+		var world = player.level();
 
-		Map<BlockPos, NbtCompound> tags = new HashMap<>();
+		Map<BlockPos, CompoundTag> tags = new HashMap<>();
 		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
-			tags.put(pos, NbtHelper.fromBlockState(state))
+			tags.put(pos, NbtUtils.writeBlockState(state))
 		);
 
 		ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
 	}
 
-	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
-		var tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
+	public static void broadcastAdd(ServerLevel world, BlockPos pos) {
+		var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
 		var payload = new AddOverlayPayload(pos, tag);
 
-		for (ServerPlayerEntity p : world.getPlayers()) {
+		for (ServerPlayer p : world.players()) {
 			ServerPlayNetworking.send(p, payload);
 		}
 	}
 
-	private static void broadcastRemove(ServerWorld world, BlockPos pos) {
+	private static void broadcastRemove(ServerLevel world, BlockPos pos) {
 		var payload = new RemoveOverlayPayload(pos);
 
-		for (ServerPlayerEntity p : world.getPlayers()) {
+		for (ServerPlayer p : world.players()) {
 			ServerPlayNetworking.send(p, payload);
 		}
 	}

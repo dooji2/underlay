@@ -1,5 +1,7 @@
 package com.dooji.underlay;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,21 +11,24 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.irisshaders.iris.api.v0.IrisApi;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.*;
-import net.minecraft.client.render.block.BlockRenderManager;
-import net.minecraft.client.render.model.BlockModelPart;
-import net.minecraft.client.render.model.BlockStateModel;
-import net.minecraft.client.render.state.WorldRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.state.LevelRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 public class UnderlayRenderer {
-    private static final Random RANDOM = Random.create();
+    private static final RandomSource RANDOM = RandomSource.create();
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
 
     private static long lastFullRefreshTime = 0;
@@ -36,7 +41,7 @@ public class UnderlayRenderer {
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
-        RENDER_CACHE.put(pos.toImmutable(), state);
+        RENDER_CACHE.put(pos.immutable(), state);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
@@ -51,15 +56,15 @@ public class UnderlayRenderer {
         lastFullRefreshTime = System.currentTimeMillis();
         clearAllOverlays();
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null && client.player != null) {
-            BlockPos playerPos = client.player.getBlockPos();
+        Minecraft client = Minecraft.getInstance();
+        if (client.level != null && client.player != null) {
+            BlockPos playerPos = client.player.blockPosition();
             int radius = 64;
 
             for (int x = -radius; x <= radius; x++) {
                 for (int y = -16; y <= 16; y++) {
                     for (int z = -radius; z <= radius; z++) {
-                        BlockPos pos = playerPos.add(x, y, z);
+                        BlockPos pos = playerPos.offset(x, y, z);
                         if (UnderlayManagerClient.hasOverlay(pos)) {
                             registerOverlay(pos, UnderlayManagerClient.getOverlay(pos));
                         }
@@ -85,31 +90,31 @@ public class UnderlayRenderer {
     }
 
     private static void renderOverlays(WorldRenderContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        BlockRenderManager blockRenderer = client.getBlockRenderManager();
-        MatrixStack matrices = context.matrices();
-        VertexConsumerProvider vertexConsumers = context.consumers();
-        WorldRenderState worldState = context.worldState();
-        Vec3d cameraPos = worldState != null ? worldState.cameraRenderState.pos : client.gameRenderer.getCamera().getCameraPos();
+        Minecraft client = Minecraft.getInstance();
+        BlockRenderDispatcher blockRenderer = client.getBlockRenderer();
+        PoseStack matrices = context.matrices();
+        MultiBufferSource vertexConsumers = context.consumers();
+        LevelRenderState worldState = context.worldState();
+        Vec3 cameraPos = worldState != null ? worldState.cameraRenderState.pos : client.gameRenderer.getMainCamera().position();
         boolean useEntityRendering = isShadersActive();
 
-        if (vertexConsumers == null || client.world == null || client.player == null) {
+        if (vertexConsumers == null || client.level == null || client.player == null) {
             return;
         }
 
-        ClientWorld world = client.world;
+        ClientLevel world = client.level;
         checkForFullRefresh();
 
-        matrices.push();
+        matrices.pushPose();
 
         for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState state = entry.getValue();
 
-            int chunks = client.options.getViewDistance().getValue();
+            int chunks = client.options.renderDistance().get();
             int blocks = chunks * 16;
             double maxDistSq = (double)blocks * blocks;
-            double distanceSq = pos.getSquaredDistance(client.player.getBlockPos());
+            double distanceSq = pos.distSqr(client.player.blockPosition());
             if (distanceSq > maxDistSq) {
                 continue;
             }
@@ -119,36 +124,36 @@ public class UnderlayRenderer {
                 continue;
             }
 
-            matrices.push();
+            matrices.pushPose();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
             matrices.translate(0.5, 0.5, 0.5);
             matrices.scale(1.0001f, 1.0001f, 1.0001f);
             matrices.translate(-0.5, -0.5, -0.5);
 
-            BlockStateModel model = blockRenderer.getModels().getModel(state);
+            BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
             List<BlockModelPart> parts = new ArrayList<>();
-            RANDOM.setSeed(state.getRenderingSeed(pos));
-            model.addParts(RANDOM, parts);
+            RANDOM.setSeed(state.getSeed(pos));
+            model.collectParts(RANDOM, parts);
 
-            RenderLayer layer = BlockRenderLayers.getMovingBlockLayer(state);
+            RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
             VertexConsumer buffer = vertexConsumers.getBuffer(layer);
-            int light = WorldRenderer.getLightmapCoordinates(world, pos);
+            int light = LevelRenderer.getLightColor(world, pos);
             if (useEntityRendering) {
-                blockRenderer.renderBlockAsEntity(
+                blockRenderer.renderSingleBlock(
                         state,
                         matrices,
                         vertexConsumers,
                         light,
-                        OverlayTexture.DEFAULT_UV
+                        OverlayTexture.NO_OVERLAY
                 );
             } else {
-                blockRenderer.renderBlock(state, pos, world, matrices, buffer, true, parts);
+                blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
             }
 
-            matrices.pop();
+            matrices.popPose();
         }
 
-        matrices.pop();
+        matrices.popPose();
     }
 
     private static class IrisHelper {

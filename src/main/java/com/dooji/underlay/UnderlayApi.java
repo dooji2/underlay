@@ -2,16 +2,15 @@ package com.dooji.underlay;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.CarpetBlock;
-import net.minecraft.block.ButtonBlock;
-import net.minecraft.block.TrapdoorBlock;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.block.PressurePlateBlock;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.AbstractRailBlock;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.CarpetBlock;
+import net.minecraft.world.level.block.PressurePlateBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 
 import static com.dooji.underlay.Underlay.EXCLUDE_TAG;
 
@@ -35,7 +34,7 @@ public class UnderlayApi {
 		CUSTOM_BLOCKS_DP.add(block);
 	}
 
-	public static boolean isOverlayBlock(ServerWorld world, Block block) {
+	public static boolean isOverlayBlock(ServerLevel world, Block block) {
 		if (block == null) {
 			return false;
 		}
@@ -44,16 +43,16 @@ public class UnderlayApi {
 			return true;
 		}
 
-		var blocks = world.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
-		if (blocks.getEntry(block).isIn(EXCLUDE_TAG)) {
+		var blocks = world.registryAccess().lookupOrThrow(Registries.BLOCK);
+		if (blocks.wrapAsHolder(block).is(EXCLUDE_TAG)) {
 			return false;
 		}
 
 		return block instanceof CarpetBlock
                 || block instanceof ButtonBlock
-                || block instanceof TrapdoorBlock
+                || block instanceof TrapDoorBlock
                 || block instanceof PressurePlateBlock
                 || block instanceof SlabBlock
-                || block instanceof AbstractRailBlock;
+                || block instanceof BaseRailBlock;
 	}
 }

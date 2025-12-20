@@ -7,14 +7,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.dooji.underlay.UnderlayManagerClient;
 import com.dooji.underlay.UnderlayRaycast;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import snownee.jade.impl.BlockAccessorImpl;
 
 @Mixin(BlockAccessorImpl.class)
@@ -23,10 +22,10 @@ public class BlockAccessorImplMixin {
     private void getOverlayBlockState(CallbackInfoReturnable<BlockState> cir) {
         BlockAccessorImpl self = (BlockAccessorImpl)(Object)this;
         BlockPos pos = self.getPosition();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         if (client.player != null) {
-            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
             if (hit != null && hit.getBlockPos().equals(pos)) {
                 BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
                 if (overlayState != null) cir.setReturnValue(overlayState);
@@ -38,10 +37,10 @@ public class BlockAccessorImplMixin {
     private void getOverlayBlock(CallbackInfoReturnable<Block> cir) {
         BlockAccessorImpl self = (BlockAccessorImpl)(Object)this;
         BlockPos pos = self.getPosition();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         if (client.player != null) {
-            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
             if (hit != null && hit.getBlockPos().equals(pos)) {
                 BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
                 if (overlayState != null) cir.setReturnValue(overlayState.getBlock());
@@ -53,10 +52,10 @@ public class BlockAccessorImplMixin {
     private void getOverlayPickedResult(CallbackInfoReturnable<ItemStack> cir) {
         BlockAccessorImpl self = (BlockAccessorImpl)(Object)this;
         BlockPos pos = self.getPosition();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         if (client.player != null) {
-            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
             if (hit != null && hit.getBlockPos().equals(pos)) {
                 BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
                 if (overlayState != null) cir.setReturnValue(new ItemStack(overlayState.getBlock().asItem()));
@@ -68,10 +67,10 @@ public class BlockAccessorImplMixin {
     private void getOverlayServersideRep(CallbackInfoReturnable<ItemStack> cir) {
         BlockAccessorImpl self = (BlockAccessorImpl)(Object)this;
         BlockPos pos = self.getPosition();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         if (client.player != null) {
-            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.getBlockInteractionRange(), client.getRenderTickCounter().getDynamicDeltaTicks());
+            BlockHitResult hit = UnderlayRaycast.trace(client.player, client.player.blockInteractionRange(), client.getDeltaTracker().getGameTimeDeltaTicks());
             if (hit != null && hit.getBlockPos().equals(pos)) {
                 BlockState overlayState = UnderlayManagerClient.getOverlay(pos);
                 if (overlayState != null && overlayState.getBlock().asItem() instanceof BlockItem) {

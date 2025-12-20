@@ -1,44 +1,44 @@
 package com.dooji.underlay;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class UnderlayRaycast {
     public static BlockHitResult trace(Entity viewer, double reach, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
-        Vec3d eye = viewer.getCameraPosVec(tickDelta);
-        Vec3d look = viewer.getRotationVec(tickDelta);
-        Vec3d end = eye.add(look.multiply(reach));
+        Vec3 eye = viewer.getEyePosition(tickDelta);
+        Vec3 look = viewer.getViewVector(tickDelta);
+        Vec3 end = eye.add(look.scale(reach));
 
         double best = Double.MAX_VALUE;
         BlockHitResult bestHit = null;
 
         for (BlockPos pos : UnderlayManagerClient.getAll().keySet()) {
-            if (pos.getSquaredDistance(eye) > reach * reach) continue;
+            if (pos.distToCenterSqr(eye) > reach * reach) continue;
 
             BlockState state = UnderlayManagerClient.getOverlay(pos);
-            VoxelShape shape = state.getOutlineShape(client.world, pos, ShapeContext.of((PlayerEntity)viewer));
+            VoxelShape shape = state.getShape(client.level, pos, CollisionContext.of((Player)viewer));
 
-            BlockHitResult hit = shape.raycast(eye, end, pos);
+            BlockHitResult hit = shape.clip(eye, end, pos);
             if (hit == null) continue;
 
-            Vec3d hitPos = hit.getPos();
-            double distanceSquared = hitPos.squaredDistanceTo(eye);
+            Vec3 hitPos = hit.getLocation();
+            double distanceSquared = hitPos.distanceToSqr(eye);
 
-            RaycastContext context = new RaycastContext(eye, hitPos, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, viewer);
-            BlockHitResult worldHit = client.world.raycast(context);
+            ClipContext context = new ClipContext(eye, hitPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, viewer);
+            BlockHitResult worldHit = client.level.clip(context);
 
-            if (worldHit.getType() == HitResult.Type.BLOCK && worldHit.getPos().squaredDistanceTo(eye) < distanceSquared) continue;
+            if (worldHit.getType() == HitResult.Type.BLOCK && worldHit.getLocation().distanceToSqr(eye) < distanceSquared) continue;
             if (distanceSquared < best) {
                 best = distanceSquared;
                 bestHit = hit;

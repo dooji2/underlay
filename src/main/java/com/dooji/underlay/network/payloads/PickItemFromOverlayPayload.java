@@ -1,24 +1,24 @@
 package com.dooji.underlay.network.payloads;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
 
-public record PickItemFromOverlayPayload(BlockPos pos) implements CustomPayload {
-    public static final CustomPayload.Id<PickItemFromOverlayPayload> ID = 
-        new CustomPayload.Id<>(Identifier.of("underlay", "pick_item_from_overlay"));
+public record PickItemFromOverlayPayload(BlockPos pos) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<PickItemFromOverlayPayload> ID = 
+        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("underlay", "pick_item_from_overlay"));
 
-    public static final PacketCodec<PacketByteBuf, PickItemFromOverlayPayload> CODEC =
-        PacketCodec.tuple(
-            BlockPos.PACKET_CODEC,
+    public static final StreamCodec<FriendlyByteBuf, PickItemFromOverlayPayload> CODEC =
+        StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
             PickItemFromOverlayPayload::pos,
             PickItemFromOverlayPayload::new
         );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() {
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

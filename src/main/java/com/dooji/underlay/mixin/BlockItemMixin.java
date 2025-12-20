@@ -1,75 +1,74 @@
 package com.dooji.underlay.mixin;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.dooji.underlay.UnderlayManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
 import com.dooji.underlay.UnderlayApi;
 
 @Mixin(BlockItem.class)
 public class BlockItemMixin {
-	@Inject(method = "place(Lnet/minecraft/item/ItemPlacementContext;)Lnet/minecraft/util/ActionResult;", at = @At("HEAD"), cancellable = true)
-	private void handleOverlayPlacement(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
+	@Inject(method = "place(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/InteractionResult;", at = @At("HEAD"), cancellable = true)
+	private void handleOverlayPlacement(BlockPlaceContext context, CallbackInfoReturnable<InteractionResult> cir) {
 		BlockItem self = (BlockItem)(Object)this;
 		Block block = self.getBlock();
 
-		BlockPos pos = context.getBlockPos();
-		World world = context.getWorld();
+		BlockPos pos = context.getClickedPos();
+		Level world = context.getLevel();
 		BlockState existing = world.getBlockState(pos);
-		BlockState newState  = block.getPlacementState(context);
+		BlockState newState  = block.getStateForPlacement(context);
 
 		if (newState != null && existing.getBlock() == block && newState.getBlock() == block) {
 			return;
 		}
 		
-		if (!world.isClient() && !UnderlayApi.isOverlayBlock((ServerWorld)world, block)) {
+		if (!world.isClientSide() && !UnderlayApi.isOverlayBlock((ServerLevel)world, block)) {
 			return;
 		}
 
-		if (existing.isAir() || Block.isShapeFullCube(existing.getOutlineShape(world, pos)) || context.getSide() != Direction.UP || !existing.getFluidState().isEmpty()) {
+		if (existing.isAir() || Block.isShapeFullBlock(existing.getShape(world, pos)) || context.getClickedFace() != Direction.UP || !existing.getFluidState().isEmpty()) {
 			return;
 		}
 
-		BlockState overlay = block.getPlacementState(context);
-		ItemStack stack = context.getStack();
+		BlockState overlay = block.getStateForPlacement(context);
+		ItemStack stack = context.getItemInHand();
 
-		if (!world.isClient()) {
-			UnderlayManager.addOverlay((ServerPlayerEntity)context.getPlayer(), (ServerWorld)world, pos, overlay);
-			PlayerEntity player = context.getPlayer();
+		if (!world.isClientSide()) {
+			UnderlayManager.addOverlay((ServerPlayer)context.getPlayer(), (ServerLevel)world, pos, overlay);
+			Player player = context.getPlayer();
 
-			if (!world.canEntityModifyAt(player, pos)) {
-                cir.setReturnValue(ActionResult.FAIL);
+			if (!world.mayInteract(player, pos)) {
+                cir.setReturnValue(InteractionResult.FAIL);
                 cir.cancel();
 
                 return;
             }
 
 			if (player != null && !player.isCreative()) {
-				stack.decrement(1);
+				stack.shrink(1);
 			}
 
-			BlockSoundGroup sounds = overlay.getSoundGroup();
-			world.playSound(null, pos, sounds.getPlaceSound(), SoundCategory.BLOCKS, sounds.getVolume(), sounds.getPitch());
+			SoundType sounds = overlay.getSoundType();
+			world.playSound(null, pos, sounds.getPlaceSound(), SoundSource.BLOCKS, sounds.getVolume(), sounds.getPitch());
 		}
 
-		cir.setReturnValue(ActionResult.SUCCESS);
+		cir.setReturnValue(InteractionResult.SUCCESS);
 		cir.cancel();
 	}
 }

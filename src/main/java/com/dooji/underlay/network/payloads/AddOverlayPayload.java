@@ -1,30 +1,30 @@
 package com.dooji.underlay.network.payloads;
 
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
 
-public record AddOverlayPayload(BlockPos pos, NbtCompound stateTag) implements CustomPayload {
-    public static final CustomPayload.Id<AddOverlayPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "add_overlay"));
+public record AddOverlayPayload(BlockPos pos, CompoundTag stateTag) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<AddOverlayPayload> ID =
+        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("underlay", "add_overlay"));
 
-    public static final PacketCodec<PacketByteBuf, AddOverlayPayload> CODEC = PacketCodec.ofStatic(
+    public static final StreamCodec<FriendlyByteBuf, AddOverlayPayload> CODEC = StreamCodec.of(
         (buf, payload) -> {
             buf.writeBlockPos(payload.pos());
             buf.writeNbt(payload.stateTag());
         },
         buf -> {
             BlockPos pos = buf.readBlockPos();
-            NbtCompound tag = buf.readNbt();
+            CompoundTag tag = buf.readNbt();
             return new AddOverlayPayload(pos, tag);
         }
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() {
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }
