@@ -24,7 +24,7 @@ import com.dooji.underlay.UnderlayApi;
 
 @Mixin(BlockItem.class)
 public class BlockItemMixin {
-	@Inject(method = "place(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/InteractionResult;", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "place", at = @At("HEAD"), cancellable = true)
 	private void handleOverlayPlacement(BlockPlaceContext context, CallbackInfoReturnable<InteractionResult> cir) {
 		BlockItem self = (BlockItem)(Object)this;
 		Block block = self.getBlock();
