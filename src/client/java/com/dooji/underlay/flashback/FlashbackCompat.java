@@ -1,4 +1,4 @@
-package com.dooji.underlay.compat;
+package com.dooji.underlay.flashback;
 
 import com.dooji.underlay.network.payloads.RequestOverlaySyncPayload;
 import com.moulberry.flashback.Flashback;

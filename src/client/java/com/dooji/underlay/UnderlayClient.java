@@ -2,7 +2,7 @@ package com.dooji.underlay;
 
 import java.util.Map;
 
-import com.dooji.underlay.compat.FlashbackCompat;
+import com.dooji.underlay.flashback.FlashbackCompat;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
