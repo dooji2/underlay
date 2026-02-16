@@ -14,10 +14,12 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.network.play.server.SPacketAnimation;
 import net.minecraft.world.WorldServer;
 
 import net.minecraftforge.fml.common.eventhandler.Event;
@@ -71,6 +73,7 @@ public class BlockInteractionEvents {
             return;
         }
 
+        event.setCancellationResult(EnumActionResult.SUCCESS);
         event.setCanceled(true);
         event.setUseBlock(Event.Result.DENY);
         event.setUseItem(Event.Result.DENY);
@@ -117,6 +120,7 @@ public class BlockInteractionEvents {
             return;
         }
 
+        event.setCancellationResult(EnumActionResult.SUCCESS);
         event.setCanceled(true);
     }
 
@@ -162,6 +166,7 @@ public class BlockInteractionEvents {
         SoundType sound = newState.getBlock().getSoundType(newState, world, targetPos, player);
         world.playSound(player, targetPos, sound.getPlaceSound(), SoundCategory.BLOCKS, sound.getVolume(), sound.getPitch());
         player.swingArm(EnumHand.MAIN_HAND);
+        world.getEntityTracker().sendToTrackingAndSelf(player, new SPacketAnimation(player, 0));
 
         return true;
     }

@@ -17,6 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTUtil;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
@@ -124,6 +125,7 @@ public class UnderlayClient {
 
         MultiPlayerGameModeAccessor interactionManager = (MultiPlayerGameModeAccessor) client.playerController;
         UnderlayNetworking.INSTANCE.sendToServer(new RemoveOverlayPayload(pos));
+        client.player.swingArm(EnumHand.MAIN_HAND);
         interactionManager.setBlockBreakingCooldown(5);
     }
 
