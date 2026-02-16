@@ -19,7 +19,7 @@ import snownee.jade.overlay.RayTracing;
 @Mixin(value = RayTracing.class, remap = false)
 public abstract class JadeRayTracingMixin {
     @Inject(method = "rayTrace", at = @At("RETURN"), cancellable = true)
-    private void overlayPriority(Entity entity, double blockReach, double entityReach, CallbackInfoReturnable<HitResult> cir) {
+    private void overlayPriority(Entity entity, double blockReach, double entityReach, float partialTicks, CallbackInfoReturnable<HitResult> cir) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.level == null) {
             return;
