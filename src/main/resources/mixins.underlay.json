@@ -3,7 +3,9 @@
   "package": "com.dooji.underlay.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "mixins.underlay.refmap.json",
-  "mixins": [],
+  "mixins": [
+    "StructureTemplateMixin"
+  ],
   "client": [
     "MultiPlayerGameModeAccessor",
     "MinecraftMixin"

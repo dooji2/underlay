@@ -19,12 +19,10 @@ public class UnderlayManager {
 
     public static void addOverlay(ServerPlayer player, Level world, BlockPos pos, BlockState blockState) {
         if (world == null || pos == null || blockState == null) {
-            Underlay.LOGGER.warn("Attempted to add overlay with null parameters");
             return;
         }
 
         if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
-            Underlay.LOGGER.warn("Attempted to add non-overlay block as overlay: " + blockState);
             return;
         }
 
@@ -46,13 +44,33 @@ public class UnderlayManager {
                 UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
             }
         } catch (Exception e) {
-            Underlay.LOGGER.error(("Failed to add overlay at ") + pos, e);
+            Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
+        }
+    }
+
+    public static void addOverlayFromStructure(Level world, BlockPos pos, BlockState blockState) {
+        if (world == null || pos == null || blockState == null) {
+            return;
+        }
+
+        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+            return;
+        }
+
+        String dimensionKey = getDimensionKey(world);
+        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.computeIfAbsent(dimensionKey, k -> new ConcurrentHashMap<>());
+
+        try {
+            worldOverlays.put(pos.immutable(), blockState);
+            UnderlayNetworking.broadcastAdd((ServerLevel)world, pos);
+            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+        } catch (Exception e) {
+            Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
         }
     }
 
     public static boolean removeOverlay(Level world, BlockPos pos) {
         if (world == null || pos == null) {
-            Underlay.LOGGER.warn("Attempted to remove overlay with null parameters");
             return false;
         }
 

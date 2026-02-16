@@ -160,7 +160,6 @@ dependencies {
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
     compileOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
-    runtimeOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
