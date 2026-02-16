@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalMixin {
-    @Inject(method = "renderBlockLayer(Lnet/minecraft/util/BlockRenderLayer;DILnet/minecraft/entity/Entity;)I", at = @At("RETURN"))
+    @Inject(method = "renderBlockLayer", at = @At("RETURN"))
     private void renderLayer(BlockRenderLayer layer, double partialTicks, int pass, Entity entity, CallbackInfoReturnable<Integer> cir) {
         UnderlayRenderer.renderLayer(layer, partialTicks);
     }

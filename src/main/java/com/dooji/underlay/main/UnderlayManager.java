@@ -55,6 +55,27 @@ public class UnderlayManager {
         }
     }
 
+    public static void addOverlayFromStructure(World world, BlockPos pos, IBlockState blockState) {
+        if (world == null || pos == null || blockState == null) {
+            return;
+        }
+
+        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+            return;
+        }
+
+        String dimensionKey = getDimensionKey(world);
+        Map<BlockPos, IBlockState> worldOverlays = OVERLAYS.computeIfAbsent(dimensionKey, k -> new ConcurrentHashMap<BlockPos, IBlockState>());
+
+        try {
+            worldOverlays.put(pos, blockState);
+            UnderlayNetworking.broadcastAdd((WorldServer) world, pos);
+            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+        } catch (Exception e) {
+            Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
+        }
+    }
+
     public static boolean removeOverlay(World world, BlockPos pos) {
         if (world == null || pos == null) {
             return false;
