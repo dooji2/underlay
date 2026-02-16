@@ -3,7 +3,8 @@
 	"package": "com.dooji.underlay.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"BlockItemMixin"
+		"BlockItemMixin",
+		"StructureTemplateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
