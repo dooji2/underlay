@@ -64,7 +64,7 @@ public class BlockAccessorImplMixin {
         }
     }
 
-    @Inject(method = "getFakeBlock", at = @At("RETURN"), cancellable = true, remap = false)
+    @Inject(method = "getServersideRep", at = @At("RETURN"), cancellable = true, remap = false)
     private void getOverlayFakeBlock(CallbackInfoReturnable<ItemStack> cir) {
         BlockAccessorImpl self = (BlockAccessorImpl)(Object)this;
         BlockPos pos = self.getPosition();
