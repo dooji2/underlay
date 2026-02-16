@@ -7,6 +7,7 @@ import com.dooji.underlay.UnderlayManager;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.PickItemFromOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
+import com.dooji.underlay.network.payloads.RequestOverlaySyncPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
@@ -33,6 +34,7 @@ public class UnderlayNetworking {
 		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(PickItemFromOverlayPayload.ID, PickItemFromOverlayPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(RequestOverlaySyncPayload.ID, RequestOverlaySyncPayload.CODEC);
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			syncOverlaysToPlayer(handler.getPlayer());
@@ -100,6 +102,10 @@ public class UnderlayNetworking {
 					}
 				}
 			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(RequestOverlaySyncPayload.ID, (payload, context) -> {
+			syncOverlaysToPlayer(context.player());
 		});
 	}
 

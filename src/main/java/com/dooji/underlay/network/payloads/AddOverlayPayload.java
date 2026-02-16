@@ -1,5 +1,6 @@
 package com.dooji.underlay.network.payloads;
 
+import com.dooji.underlay.Underlay;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
@@ -9,7 +10,7 @@ import net.minecraft.util.math.BlockPos;
 
 public record AddOverlayPayload(BlockPos pos, NbtCompound stateTag) implements CustomPayload {
     public static final CustomPayload.Id<AddOverlayPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "add_overlay"));
+        new CustomPayload.Id<>(Identifier.of(Underlay.MOD_ID, "add_overlay"));
 
     public static final PacketCodec<PacketByteBuf, AddOverlayPayload> CODEC = PacketCodec.ofStatic(
         (buf, payload) -> {

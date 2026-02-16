@@ -3,6 +3,7 @@ package com.dooji.underlay.network.payloads;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.dooji.underlay.Underlay;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
@@ -12,7 +13,7 @@ import net.minecraft.util.math.BlockPos;
 
 public record SyncOverlaysPayload(Map<BlockPos, NbtCompound> tags) implements CustomPayload {
     public static final CustomPayload.Id<SyncOverlaysPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("underlay", "sync_overlays"));
+        new CustomPayload.Id<>(Identifier.of(Underlay.MOD_ID, "sync_overlays"));
 
     public static final PacketCodec<PacketByteBuf, SyncOverlaysPayload> CODEC = PacketCodec.ofStatic(
         (buf, payload) -> {
