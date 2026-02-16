@@ -4,7 +4,8 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"BlockItemMixin",
-		"AbstractMinecartEntityMixin"
+		"AbstractMinecartEntityMixin",
+		"StructureTemplateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
