@@ -4,7 +4,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -24,16 +23,15 @@ public class UnderlayRaycast {
         BlockHitResult bestHit = null;
 
         for (BlockPos pos : UnderlayManagerClient.getAll().keySet()) {
-            if (pos.getSquaredDistance(eye) > reach * reach) continue;
-
             BlockState state = UnderlayManagerClient.getOverlay(pos);
-            VoxelShape shape = state.getOutlineShape(client.world, pos, ShapeContext.of((PlayerEntity)viewer));
+            VoxelShape shape = state.getOutlineShape(client.world, pos, ShapeContext.of(viewer));
 
             BlockHitResult hit = shape.raycast(eye, end, pos);
             if (hit == null) continue;
 
             Vec3d hitPos = hit.getPos();
             double distanceSquared = hitPos.squaredDistanceTo(eye);
+            if (distanceSquared > reach * reach) continue;
 
             RaycastContext context = new RaycastContext(eye, hitPos, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, viewer);
             BlockHitResult worldHit = client.world.raycast(context);
