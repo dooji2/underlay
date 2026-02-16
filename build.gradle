@@ -61,7 +61,11 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// jade
-	modImplementation "maven.modrinth:nvQzSEkH:qC0qUqL5"
+	modCompileOnly "maven.modrinth:nvQzSEkH:${jade_version}"
+	modLocalRuntime "maven.modrinth:nvQzSEkH:${jade_version}"
+
+	// flashback
+	modCompileOnly "maven.modrinth:flashback:${flashback_version}"
 	
 }
 

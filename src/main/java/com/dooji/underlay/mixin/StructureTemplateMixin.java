@@ -32,7 +32,7 @@ public abstract class StructureTemplateMixin {
     private final Map<BlockPos, BlockState> relativeOverlays = new HashMap<>();
 
     @Shadow
-    public static BlockPos calculateRelativePosition(StructurePlacementData settings, BlockPos pos) {
+    public static BlockPos transform(StructurePlacementData settings, BlockPos pos) {
         throw new AssertionError();
     }
 
@@ -102,7 +102,7 @@ public abstract class StructureTemplateMixin {
 
     @Inject(method = "place", at = @At("RETURN"))
     private void placeOverlays(ServerWorldAccess world, BlockPos pos, BlockPos pivot, StructurePlacementData settings, Random random, int flags, CallbackInfoReturnable<Boolean> cir) {
-        if (!cir.getReturnValueZ() || relativeOverlays.isEmpty()) {
+        if (!cir.getReturnValue() || relativeOverlays.isEmpty()) {
             return;
         }
 
@@ -111,7 +111,7 @@ public abstract class StructureTemplateMixin {
         }
 
         for (Map.Entry<BlockPos, BlockState> entry : relativeOverlays.entrySet()) {
-            BlockPos transformed = calculateRelativePosition(settings, entry.getKey());
+            BlockPos transformed = transform(settings, entry.getKey());
             BlockPos worldPos = pos.add(transformed);
             UnderlayManager.addOverlayFromStructure(serverWorld, worldPos, entry.getValue());
         }
