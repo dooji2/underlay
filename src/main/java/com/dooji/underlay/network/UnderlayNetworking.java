@@ -6,6 +6,7 @@ import java.util.Map;
 import com.dooji.underlay.UnderlayManager;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
+import com.dooji.underlay.network.payloads.RequestOverlaySyncPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
@@ -27,6 +28,7 @@ public class UnderlayNetworking {
 		PayloadTypeRegistry.playS2C().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(RequestOverlaySyncPayload.ID, RequestOverlaySyncPayload.CODEC);
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			syncOverlaysToPlayer(handler.getPlayer());
@@ -59,6 +61,10 @@ public class UnderlayNetworking {
 
 				broadcastRemove(world, pos);
 			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(RequestOverlaySyncPayload.ID, (payload, context) -> {
+			syncOverlaysToPlayer(context.player());
 		});
 	}
 
