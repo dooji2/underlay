@@ -1,5 +1,6 @@
 package com.dooji.underlay.network.payloads;
 
+import com.dooji.underlay.Underlay;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -8,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 public record PickItemFromOverlayPayload(BlockPos pos) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PickItemFromOverlayPayload> ID = 
-        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("underlay", "pick_item_from_overlay"));
+        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(Underlay.MOD_ID, "pick_item_from_overlay"));
 
     public static final StreamCodec<FriendlyByteBuf, PickItemFromOverlayPayload> CODEC =
         StreamCodec.composite(

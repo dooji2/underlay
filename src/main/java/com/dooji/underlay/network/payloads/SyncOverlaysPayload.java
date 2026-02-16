@@ -2,6 +2,7 @@ package com.dooji.underlay.network.payloads;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.dooji.underlay.Underlay;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,7 +12,7 @@ import net.minecraft.resources.Identifier;
 
 public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SyncOverlaysPayload> ID =
-        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("underlay", "sync_overlays"));
+        new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(Underlay.MOD_ID, "sync_overlays"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncOverlaysPayload> CODEC = StreamCodec.of(
         (buf, payload) -> {
