@@ -3,6 +3,10 @@ name: Publish Underlay
 on:
   workflow_dispatch:
     inputs:
+      target_branch:
+        description: "Branch to build and publish from"
+        required: true
+        default: "main"
       version:
         description: "Version number"
         required: true
@@ -20,12 +24,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
 
       - name: Java version
         id: java
         run: |
           set -euo pipefail
-          BRANCH="${GITHUB_REF_NAME}"
+          BRANCH="${{ inputs.target_branch }}"
           case "$BRANCH" in
             1.12.2)
               JAVA_VERSION=8
@@ -56,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          BRANCH="${GITHUB_REF_NAME}"
+          BRANCH="${{ inputs.target_branch }}"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
           case "$BRANCH" in
