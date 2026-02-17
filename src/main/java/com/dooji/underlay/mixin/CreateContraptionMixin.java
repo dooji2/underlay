@@ -75,7 +75,7 @@ public abstract class CreateContraptionMixin implements HasUnderlayOverlays {
 
             BlockState overlay = UnderlayManager.getOverlay(world, worldPos);
             movingOverlays.put(localPos.immutable(), overlay);
-            UnderlayManager.removeOverlayFromContraption(world, worldPos);
+            UnderlayManager.removeOverlayAndBroadcast(world, worldPos);
         }
     }
 

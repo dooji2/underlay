@@ -118,7 +118,7 @@ public class UnderlayManager {
         return false;
     }
 
-    public static boolean removeOverlayFromContraption(Level world, BlockPos pos) {
+    public static boolean removeOverlayAndBroadcast(Level world, BlockPos pos) {
         boolean removed = removeOverlay(world, pos);
 
         if (removed && !world.isClientSide() && world instanceof ServerLevel serverLevel) {

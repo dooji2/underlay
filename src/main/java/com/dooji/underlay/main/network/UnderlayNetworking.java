@@ -88,13 +88,11 @@ public class UnderlayNetworking {
 
                             if (UnderlayManager.hasOverlay(world, pos)) {
                                 var oldState = UnderlayManager.getOverlay(world, pos);
-                                UnderlayManager.removeOverlay(world, pos);
+                                boolean removed = UnderlayManager.removeOverlayAndBroadcast(world, pos);
 
-                                if (!player.isCreative()) {
+                                if (removed && !player.isCreative()) {
                                     world.addFreshEntity(new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(oldState.getBlock())));
                                 }
-
-                                broadcastRemove(world, pos);
                             }
                         });
                     } else if (FMLEnvironment.dist == Dist.CLIENT) {
