@@ -94,7 +94,7 @@ public class UnderlayNetworking {
                                     world.addFreshEntity(new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(oldState.getBlock())));
                                 }
 
-                                INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new RemoveOverlayPayload(pos));
+                                broadcastRemove(world, pos);
                             }
                         });
                     } else if (FMLEnvironment.dist == Dist.CLIENT) {
@@ -120,5 +120,9 @@ public class UnderlayNetworking {
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
         var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
         INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new AddOverlayPayload(pos, tag));
+    }
+
+    public static void broadcastRemove(ServerLevel world, BlockPos pos) {
+        INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new RemoveOverlayPayload(pos));
     }
 }

@@ -69,6 +69,30 @@ public class UnderlayManager {
         }
     }
 
+    public static void addOverlayFromContraption(Level world, BlockPos pos, BlockState blockState) {
+        if (world == null || pos == null || blockState == null) {
+            return;
+        }
+
+        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+            return;
+        }
+
+        String dimensionKey = getDimensionKey(world);
+        Map<BlockPos, BlockState> worldOverlays = OVERLAYS.computeIfAbsent(dimensionKey, k -> new ConcurrentHashMap<>());
+
+        try {
+            worldOverlays.put(pos.immutable(), blockState);
+
+            if (!world.isClientSide() && world instanceof ServerLevel serverLevel) {
+                UnderlayNetworking.broadcastAdd(serverLevel, pos);
+                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+            }
+        } catch (Exception e) {
+            Underlay.LOGGER.error("Failed to add contraption overlay at " + pos, e);
+        }
+    }
+
     public static boolean removeOverlay(Level world, BlockPos pos) {
         if (world == null || pos == null) {
             return false;
@@ -92,6 +116,16 @@ public class UnderlayManager {
         }
 
         return false;
+    }
+
+    public static boolean removeOverlayFromContraption(Level world, BlockPos pos) {
+        boolean removed = removeOverlay(world, pos);
+
+        if (removed && !world.isClientSide() && world instanceof ServerLevel serverLevel) {
+            UnderlayNetworking.broadcastRemove(serverLevel, pos);
+        }
+
+        return removed;
     }
 
     public static boolean hasOverlay(Level world, BlockPos pos) {

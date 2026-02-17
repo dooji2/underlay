@@ -121,6 +121,8 @@ repositories {
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
 
     mavenLocal()
+    maven { url = "https://maven.createmod.net" }
+    maven { url = "https://maven.tterrag.com" }
     exclusiveContent {
         forRepository {
             maven {
@@ -160,6 +162,15 @@ dependencies {
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
     compileOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
+    // create stuff
+    compileOnly(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}"))
+    compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
+    compileOnly(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+    runtimeOnly(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
+    runtimeOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}"))
+    runtimeOnly(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+    runtimeOnly(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
+    runtimeOnly fg.deobf("io.github.llamalad7:mixinextras-forge:0.4.1")
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
@@ -171,6 +182,7 @@ dependencies {
 mixin {
     add sourceSets.main, 'mixins.underlay.refmap.json'
     config 'mixins.underlay.json'
+    config 'mixins.underlay.create.json'
     config 'mixins.underlay.jade.json'
 }
 
