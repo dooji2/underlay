@@ -1,0 +1,174 @@
+name: Publish Underlay
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number"
+        required: true
+      changelog:
+        description: "Changelog"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Java version
+        id: java
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF_NAME}"
+          case "$BRANCH" in
+            1.12.2)
+              JAVA_VERSION=8
+              ;;
+            1.20.1|forge-1.20.1)
+              JAVA_VERSION=17
+              ;;
+            *)
+              JAVA_VERSION=21
+              ;;
+          esac
+          echo "version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.java.outputs.version }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew clean build
+
+      - name: Resolve branch
+        id: meta
+        run: |
+          set -euo pipefail
+
+          BRANCH="${GITHUB_REF_NAME}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          case "$BRANCH" in
+            main)
+              DISPLAY_VERSION='1.21'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21\n1.21.1'
+              ;;
+            1.12.2)
+              DISPLAY_VERSION='1.12.2'
+              LOADER_LINES=$'forge'
+              GAME_VERSION_LINES=$'1.12.2'
+              ;;
+            1.20.1)
+              DISPLAY_VERSION='1.20.1'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.20.1'
+              ;;
+            1.21.2)
+              DISPLAY_VERSION='1.21.2'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21.2\n1.21.3\n1.21.4'
+              ;;
+            1.21.5)
+              DISPLAY_VERSION='1.21.5'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21.5'
+              ;;
+            1.21.6)
+              DISPLAY_VERSION='1.21.6'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21.6\n1.21.7\n1.21.8'
+              ;;
+            1.21.9)
+              DISPLAY_VERSION='1.21.9'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21.9\n1.21.10'
+              ;;
+            1.21.11)
+              DISPLAY_VERSION='1.21.11'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'1.21.11'
+              ;;
+            forge-1.20.1)
+              DISPLAY_VERSION='1.20.1'
+              LOADER_LINES=$'forge\nneoforge'
+              GAME_VERSION_LINES=$'1.20.1'
+              ;;
+            neoforge-1.21)
+              DISPLAY_VERSION='1.21.1'
+              LOADER_LINES=$'neoforge'
+              GAME_VERSION_LINES=$'1.21.1'
+              ;;
+            *)
+              echo "Unsupported branch for publish mapping: $BRANCH"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "loaders<<EOF"
+            printf '%s\n' "$LOADER_LINES"
+            echo "EOF"
+            echo "game_versions<<EOF"
+            printf '%s\n' "$GAME_VERSION_LINES"
+            echo "EOF"
+            echo "display_version=$DISPLAY_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Find jar
+        id: artifact
+        run: |
+          set -euo pipefail
+          FILE="$(ls -t build/libs/*.jar | grep -v 'sources' | head -n1 || true)"
+          if [ -z "${FILE}" ]; then
+            echo "No valid jar found in build/libs"
+            ls -la build/libs || true
+            exit 1
+          fi
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          ls -lh "$FILE"
+
+      - name: Changelog newlines
+        id: changelog
+        env:
+          RAW_CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          set -euo pipefail
+          {
+            echo "text<<EOF"
+            printf '%b\n' "$RAW_CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Modrinth & CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: iltKD9qU
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          curseforge-id: 1263531
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: ${{ steps.artifact.outputs.file }}
+
+          name: "[${{ steps.meta.outputs.display_version }}] Underlay v${{ inputs.version }}"
+          version: ${{ inputs.version }}
+          version-type: release
+          changelog: ${{ steps.changelog.outputs.text }}
+
+          loaders: ${{ steps.meta.outputs.loaders }}
+          game-versions: ${{ steps.meta.outputs.game_versions }}
+
+          retry-attempts: 2
+          fail-mode: fail
