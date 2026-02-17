@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "package": "com.dooji.underlay.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "CreateContraptionMixin"
+  ],
+  "client": [
+    "CreateContraptionEntityRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

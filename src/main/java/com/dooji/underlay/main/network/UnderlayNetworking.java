@@ -61,13 +61,11 @@ public class UnderlayNetworking {
 
                             if (UnderlayManager.hasOverlay(world, pos)) {
                                 var oldState = UnderlayManager.getOverlay(world, pos);
-                                UnderlayManager.removeOverlay(world, pos);
+                                boolean removed = UnderlayManager.removeOverlayAndBroadcast(world, pos);
 
-                                if (!player.isCreative()) {
+                                if (removed && !player.isCreative()) {
                                     world.addFreshEntity(new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(oldState.getBlock())));
                                 }
-
-                                PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new RemoveOverlayPayload(pos));
                             }
                         }
                 )
@@ -88,5 +86,9 @@ public class UnderlayNetworking {
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
         var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
         PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new AddOverlayPayload(pos, tag));
+    }
+
+    public static void broadcastRemove(ServerLevel world, BlockPos pos) {
+        PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new RemoveOverlayPayload(pos));
     }
 }

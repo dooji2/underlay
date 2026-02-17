@@ -19,6 +19,9 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    maven { url = "https://maven.createmod.net" }
+    maven { url = "https://maven.ithundxr.dev/snapshots" }
+    maven { url = "https://maven.tterrag.com" }
     exclusiveContent {
         forRepository {
             maven {
@@ -143,6 +146,15 @@ dependencies {
 
     compileOnly("maven.modrinth:nvQzSEkH:${project.jade_version_id}")
     localRuntime("maven.modrinth:nvQzSEkH:${project.jade_version_id}")
+    // create stuff
+    compileOnly("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    localRuntime("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    compileOnly("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
+    localRuntime("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
+    localRuntime("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
+    compileOnly("com.tterrag.registrate:Registrate:${registrate_version}")
+    localRuntime("com.tterrag.registrate:Registrate:${registrate_version}")
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
