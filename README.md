@@ -47,3 +47,13 @@ This mod adds an API that lets you mark your blocks as "yes you can behave like 
   ]
 }
 ```
+
+On 1.12.2, you have `config/underlay.cfg` in your Minecraft folder; it is global and server authoritative. Use the `overlay_blocks` list as follows:
+```
+general {
+    S:overlay_blocks <
+        minecraft:tallgrass
+        mymod:shiny_block
+    >
+}
+```
