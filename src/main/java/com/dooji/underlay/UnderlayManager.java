@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import com.dooji.underlay.network.UnderlayNetworking;
@@ -16,11 +17,15 @@ public class UnderlayManager {
     private static final Map<String, Map<BlockPos, BlockState>> OVERLAYS = new ConcurrentHashMap<>();
 
     public static void addOverlay(ServerPlayer player, ServerLevel world, BlockPos pos, BlockState blockState) {
+        addOverlay(player, world, pos, blockState, blockState.getBlock());
+    }
+
+    public static void addOverlay(ServerPlayer player, ServerLevel world, BlockPos pos, BlockState blockState, Block sourceBlock) {
         if (world == null || pos == null || blockState == null) {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(world, blockState.getBlock())) {
+        if (!UnderlayApi.isOverlayBlock(world, sourceBlock)) {
             return;
         }
 
