@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "mixins.underlay.refmap.json",
   "mixins": [
-    "StructureTemplateMixin"
+    "StructureTemplateMixin",
+    "StandingAndWallBlockItemAccessor"
   ],
   "client": [
     "MultiPlayerGameModeAccessor",
