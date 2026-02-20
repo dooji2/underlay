@@ -12,9 +12,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.RenderTypeHelper;
@@ -74,20 +76,38 @@ public class UnderlayRenderer {
     }
 
     private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
+            render(event, false);
             return;
         }
 
-        Minecraft client = Minecraft.getInstance();
-        BlockRenderDispatcher blockRenderer = client.getBlockRenderer();
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            render(event, true);
+            return;
+        }
+    }
+
+    private static PoseStack getPoseStack(RenderLevelStageEvent event, boolean requireEventPoseStack) {
         PoseStack poseStack = event.getPoseStack();
+        if (poseStack != null || requireEventPoseStack) {
+            return poseStack;
+        }
+
+        return new PoseStack();
+    }
+
+    private static void render(RenderLevelStageEvent event, boolean renderBlockEntities) {
+        Minecraft client = Minecraft.getInstance();
+        PoseStack poseStack = getPoseStack(event, !renderBlockEntities);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         Vec3 cameraPos = client.gameRenderer.getMainCamera().getPosition();
+        BlockRenderDispatcher blockRenderer = client.getBlockRenderer();
+        BlockEntityRenderDispatcher blockEntityRenderer = client.getBlockEntityRenderDispatcher();
         RandomSource randomSource = RandomSource.create();
         RandomSource renderTypeRandom = RandomSource.create();
         Set<RenderType> usedRenderTypes = new HashSet<>();
 
-        if (bufferSource == null || client.level == null || client.player == null) {
+        if (poseStack == null || bufferSource == null || client.level == null || client.player == null) {
             return;
         }
 
@@ -114,27 +134,39 @@ public class UnderlayRenderer {
 
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-            poseStack.translate(0.5, 0.5, 0.5);
-            poseStack.scale(1.0001f, 1.0001f, 1.0001f);
-            poseStack.translate(-0.5, -0.5, -0.5);
+            if (!renderBlockEntities) {
+                poseStack.translate(0.5, 0.5, 0.5);
+                poseStack.scale(1.0001f, 1.0001f, 1.0001f);
+                poseStack.translate(-0.5, -0.5, -0.5);
 
-            BakedModel model = blockRenderer.getBlockModel(state);
-            ModelData modelData = ModelData.EMPTY;
-            renderTypeRandom.setSeed(42L);
+                BakedModel model = blockRenderer.getBlockModel(state);
+                ModelData modelData = ModelData.EMPTY;
+                renderTypeRandom.setSeed(42L);
 
-            for (RenderType chunkRenderType : model.getRenderTypes(state, renderTypeRandom, modelData)) {
-                RenderType movingRenderType = RenderTypeHelper.getMovingBlockRenderType(chunkRenderType);
-                VertexConsumer vertexConsumer = bufferSource.getBuffer(movingRenderType);
+                for (RenderType chunkRenderType : model.getRenderTypes(state, renderTypeRandom, modelData)) {
+                    RenderType movingRenderType = RenderTypeHelper.getMovingBlockRenderType(chunkRenderType);
+                    VertexConsumer vertexConsumer = bufferSource.getBuffer(movingRenderType);
 
-                blockRenderer.renderBatched(state, pos, client.level, poseStack, vertexConsumer, false, randomSource, modelData, chunkRenderType);
-                usedRenderTypes.add(movingRenderType);
+                    blockRenderer.renderBatched(state, pos, client.level, poseStack, vertexConsumer, false, randomSource, modelData, chunkRenderType);
+                    usedRenderTypes.add(movingRenderType);
+                }
+            } else if (state.getBlock() instanceof EntityBlock entityBlock) {
+                var blockEntity = entityBlock.newBlockEntity(pos, state);
+                if (blockEntity != null) {
+                    blockEntity.setLevel(client.level);
+                    blockEntityRenderer.render(blockEntity, 0.0F, poseStack, bufferSource);
+                }
             }
 
             poseStack.popPose();
         }
 
-        for (RenderType usedType : usedRenderTypes) {
-            bufferSource.endBatch(usedType);
+        if (!renderBlockEntities) {
+            for (RenderType usedType : usedRenderTypes) {
+                bufferSource.endBatch(usedType);
+            }
+        } else {
+            bufferSource.endBatch();
         }
 
         poseStack.popPose();
