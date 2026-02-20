@@ -1,6 +1,7 @@
 package com.dooji.underlay;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
@@ -32,7 +33,7 @@ public class UnderlayClient implements ClientModInitializer {
 			client.execute(() -> {
 				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
-					.collect(java.util.stream.Collectors.toMap(
+					.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						e -> NbtHelper.toBlockState(lookup, e.getValue())
 					));
