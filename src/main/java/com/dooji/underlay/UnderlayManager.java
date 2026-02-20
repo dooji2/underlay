@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.dooji.underlay.network.UnderlayNetworking;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
@@ -18,11 +19,15 @@ public class UnderlayManager {
     private static final Map<String, Map<BlockPos, BlockState>> OVERLAYS = new ConcurrentHashMap<>();
 
     public static void addOverlay(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState blockState) {
+        addOverlay(player, world, pos, blockState, blockState.getBlock());
+    }
+
+    public static void addOverlay(ServerPlayerEntity player, ServerWorld world, BlockPos pos, BlockState blockState, Block sourceBlock) {
         if (world == null || pos == null || blockState == null) {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(world, blockState.getBlock())) {
+        if (!UnderlayApi.isOverlayBlock(world, sourceBlock)) {
             return;
         }
 
