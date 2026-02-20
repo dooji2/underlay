@@ -25,6 +25,8 @@ public class UnderlayRenderer {
     private static long lastFullRefreshTime = 0;
     private static final long FULL_REFRESH_INTERVAL = 500;
 
+    private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
+
     public static void init() {
         WorldRenderEvents.BEFORE_ENTITIES.register(UnderlayRenderer::renderOverlayBlockEntities);
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlayBlocks);
@@ -71,16 +73,14 @@ public class UnderlayRenderer {
         }
     }
 
-    static {
-        IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
-    }
-    private static final boolean IS_IRIS_INSTALLED;
     private static boolean isShadersActive() {
         if (IS_IRIS_INSTALLED) {
             return IrisHelper.isShaderPackInUse();
         }
+
         return false;
     }
+
     private static class IrisHelper {
         public static boolean isShaderPackInUse() {
             return IrisApi.getInstance().isShaderPackInUse();
