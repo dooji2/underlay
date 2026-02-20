@@ -6,11 +6,11 @@ import com.dooji.underlay.main.UnderlayManager;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.SoundType;
-import net.minecraft.block.BlockBed;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemBlock;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -43,33 +43,27 @@ public class BlockInteractionEvents {
         EntityPlayerMP player = (EntityPlayerMP) event.getEntityPlayer();
         ItemStack stack = event.getItemStack();
 
-        if (!(stack.getItem() instanceof ItemBlock)) {
+        Item item = stack.getItem();
+        if (!(item instanceof ItemBlock)) {
             return;
         }
-
-        ItemBlock blockItem = (ItemBlock) stack.getItem();
-        Block block = blockItem.getBlock();
 
         BlockPos basePos = event.getPos();
-        IBlockState baseState = event.getWorld().getBlockState(basePos);
-        if (!(baseState.getBlock() instanceof BlockBed)) {
-            return;
-        }
-
         EnumFacing face = event.getFace();
-        if (face == EnumFacing.UP) {
+        if (face == null) {
             return;
         }
 
-        BlockPos targetPos = basePos;
         WorldServer world = (WorldServer) event.getWorld();
+        IBlockState baseState = world.getBlockState(basePos);
+        BlockPos targetPos = baseState.getBlock().isReplaceable(world, basePos) ? basePos : basePos.offset(face);
 
         Vec3d hitVec = event.getHitVec();
-        float hitX = hitVec != null ? (float) (hitVec.x - targetPos.getX()) : 0.5F;
-        float hitY = hitVec != null ? (float) (hitVec.y - targetPos.getY()) : 0.5F;
-        float hitZ = hitVec != null ? (float) (hitVec.z - targetPos.getZ()) : 0.5F;
+        float hitX = hitVec != null ? (float) (hitVec.x - basePos.getX()) : 0.5F;
+        float hitY = hitVec != null ? (float) (hitVec.y - basePos.getY()) : 0.5F;
+        float hitZ = hitVec != null ? (float) (hitVec.z - basePos.getZ()) : 0.5F;
 
-        if (!placeOverlay(world, player, stack, block, targetPos, face, hitX, hitY, hitZ)) {
+        if (!placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ)) {
             return;
         }
 
@@ -92,12 +86,10 @@ public class BlockInteractionEvents {
         EntityPlayerMP player = (EntityPlayerMP) event.getEntityPlayer();
         ItemStack stack = event.getItemStack();
 
-        if (!(stack.getItem() instanceof ItemBlock)) {
+        Item item = stack.getItem();
+        if (!(item instanceof ItemBlock)) {
             return;
         }
-
-        ItemBlock blockItem = (ItemBlock) stack.getItem();
-        Block block = blockItem.getBlock();
 
         RayTraceResult hit = rayTraceFromPlayer(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1.0F);
         if (hit == null || hit.typeOfHit != RayTraceResult.Type.BLOCK || hit.getBlockPos() == null) {
@@ -105,18 +97,20 @@ public class BlockInteractionEvents {
         }
 
         EnumFacing face = hit.sideHit;
-        if (face != EnumFacing.UP) {
+        if (face == null) {
             return;
         }
 
-        BlockPos targetPos = hit.getBlockPos().up();
+        BlockPos basePos = hit.getBlockPos();
         WorldServer world = player.getServerWorld();
+        IBlockState baseState = world.getBlockState(basePos);
+        BlockPos targetPos = baseState.getBlock().isReplaceable(world, basePos) ? basePos : basePos.offset(face);
 
-        float hitX = (float) (hit.hitVec.x - targetPos.getX());
-        float hitY = (float) (hit.hitVec.y - targetPos.getY());
-        float hitZ = (float) (hit.hitVec.z - targetPos.getZ());
+        float hitX = (float) (hit.hitVec.x - basePos.getX());
+        float hitY = (float) (hit.hitVec.y - basePos.getY());
+        float hitZ = (float) (hit.hitVec.z - basePos.getZ());
 
-        if (!placeOverlay(world, player, stack, block, targetPos, face, hitX, hitY, hitZ)) {
+        if (!placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ)) {
             return;
         }
 
@@ -124,7 +118,10 @@ public class BlockInteractionEvents {
         event.setCanceled(true);
     }
 
-    private static boolean placeOverlay(WorldServer world, EntityPlayerMP player, ItemStack stack, Block block, BlockPos targetPos, EnumFacing face, float hitX, float hitY, float hitZ) {
+    private static boolean placeOverlay(WorldServer world, EntityPlayerMP player, ItemStack stack, Item item, BlockPos targetPos, EnumFacing face, float hitX, float hitY, float hitZ) {
+        ItemBlock itemBlock = (ItemBlock)item;
+        Block block = itemBlock.getBlock();
+
         IBlockState newState = block.getStateForPlacement(world, targetPos, face, hitX, hitY, hitZ, stack.getMetadata(), player, EnumHand.MAIN_HAND);
         if (newState == null) {
             return false;
@@ -137,6 +134,10 @@ public class BlockInteractionEvents {
         }
 
         if (!UnderlayApi.isOverlayBlock(block)) {
+            return false;
+        }
+
+        if (existingState.getBlock().isReplaceable(world, targetPos)) {
             return false;
         }
 
@@ -157,7 +158,7 @@ public class BlockInteractionEvents {
             return false;
         }
 
-        UnderlayManager.addOverlay(player, world, targetPos, newState);
+        UnderlayManager.addOverlay(player, world, targetPos, newState, block);
 
         if (!player.isCreative()) {
             stack.shrink(1);
