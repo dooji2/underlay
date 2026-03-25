@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.block.BlockState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
@@ -52,7 +53,7 @@ public class UnderlayNetworking {
 			}
 
 			if (UnderlayManager.hasOverlay(world, pos)) {
-				var old = UnderlayManager.getOverlay(world, pos);
+				BlockState old = UnderlayManager.getOverlay(world, pos);
 				UnderlayManager.removeOverlay(world, pos);
 				
 				if (!player.isCreative()) {
@@ -69,7 +70,7 @@ public class UnderlayNetworking {
 	}
 
 	public static void syncOverlaysToPlayer(ServerPlayerEntity player) {
-		var world = player.getWorld();
+		ServerWorld world = (ServerWorld) player.getWorld();
 
 		Map<BlockPos, NbtCompound> tags = new HashMap<>();
 		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
@@ -80,8 +81,8 @@ public class UnderlayNetworking {
 	}
 
 	public static void broadcastAdd(ServerWorld world, BlockPos pos) {
-		var tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
-		var payload = new AddOverlayPayload(pos, tag);
+		NbtCompound tag = NbtHelper.fromBlockState(UnderlayManager.getOverlay(world, pos));
+		AddOverlayPayload payload = new AddOverlayPayload(pos, tag);
 
 		for (ServerPlayerEntity p : world.getPlayers()) {
 			ServerPlayNetworking.send(p, payload);
@@ -89,7 +90,7 @@ public class UnderlayNetworking {
 	}
 
 	private static void broadcastRemove(ServerWorld world, BlockPos pos) {
-		var payload = new RemoveOverlayPayload(pos);
+		RemoveOverlayPayload payload = new RemoveOverlayPayload(pos);
 
 		for (ServerPlayerEntity p : world.getPlayers()) {
 			ServerPlayNetworking.send(p, payload);
