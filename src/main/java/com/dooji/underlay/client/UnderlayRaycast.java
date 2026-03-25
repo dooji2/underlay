@@ -23,6 +23,8 @@ public class UnderlayRaycast {
         BlockHitResult bestHit = null;
 
         for (BlockPos pos : UnderlayManagerClient.getAll().keySet()) {
+            if (pos.distSqr(new BlockPos((int)eye.x, (int)eye.y, (int)eye.z)) > reach * reach) continue;
+
             BlockState state = UnderlayManagerClient.getOverlay(pos);
             VoxelShape shape = state.getShape(client.level, pos, CollisionContext.of(viewer));
 
@@ -31,7 +33,6 @@ public class UnderlayRaycast {
 
             Vec3 hitPos = hit.getLocation();
             double distanceSquared = hitPos.distanceToSqr(eye);
-            if (distanceSquared > reach * reach) continue;
 
             ClipContext context = new ClipContext(eye, hitPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, viewer);
             BlockHitResult worldHit = client.level.clip(context);
