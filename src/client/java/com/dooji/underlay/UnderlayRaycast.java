@@ -3,6 +3,7 @@ package com.dooji.underlay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -23,15 +24,16 @@ public class UnderlayRaycast {
         BlockHitResult bestHit = null;
 
         for (BlockPos pos : UnderlayManagerClient.getAll().keySet()) {
+            if (pos.distToCenterSqr(eye) > reach * reach) continue;
+
             BlockState state = UnderlayManagerClient.getOverlay(pos);
-            VoxelShape shape = state.getShape(client.level, pos, CollisionContext.of(viewer));
+            VoxelShape shape = state.getShape(client.level, pos, CollisionContext.of((Player)viewer));
 
             BlockHitResult hit = shape.clip(eye, end, pos);
             if (hit == null) continue;
 
             Vec3 hitPos = hit.getLocation();
             double distanceSquared = hitPos.distanceToSqr(eye);
-            if (distanceSquared > reach * reach) continue;
 
             ClipContext context = new ClipContext(eye, hitPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, viewer);
             BlockHitResult worldHit = client.level.clip(context);
