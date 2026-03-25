@@ -16,6 +16,7 @@ import net.minecraft.world.item.StandingAndWallBlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.bus.api.EventPriority;
@@ -98,7 +99,7 @@ public class BlockInteractionEvents {
             stack.shrink(1);
         }
 
-        var sound = newState.getSoundType();
+        SoundType sound = newState.getSoundType();
         world.playSound(player, targetPos, sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(), sound.getPitch());
     }
 

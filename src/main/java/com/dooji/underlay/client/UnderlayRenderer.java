@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -151,7 +152,7 @@ public class UnderlayRenderer {
                     usedRenderTypes.add(movingRenderType);
                 }
             } else if (state.getBlock() instanceof EntityBlock entityBlock) {
-                var blockEntity = entityBlock.newBlockEntity(pos, state);
+                BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
                 if (blockEntity != null) {
                     blockEntity.setLevel(client.level);
                     blockEntityRenderer.render(blockEntity, 0.0F, poseStack, bufferSource);

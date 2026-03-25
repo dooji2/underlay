@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -60,7 +61,7 @@ public class UnderlayNetworking {
                             if (!world.mayInteract(player, pos)) return;
 
                             if (UnderlayManager.hasOverlay(world, pos)) {
-                                var oldState = UnderlayManager.getOverlay(world, pos);
+                                BlockState oldState = UnderlayManager.getOverlay(world, pos);
                                 boolean removed = UnderlayManager.removeOverlayAndBroadcast(world, pos);
 
                                 if (removed && !player.isCreative()) {
@@ -73,7 +74,7 @@ public class UnderlayNetworking {
     }
 
     public static void syncOverlaysToPlayer(ServerPlayer player) {
-        var world = player.serverLevel();
+        ServerLevel world = player.serverLevel();
         Map<BlockPos, CompoundTag> tags = new HashMap<>();
 
         UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
@@ -84,7 +85,7 @@ public class UnderlayNetworking {
     }
 
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
-        var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
+        CompoundTag tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
         PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new AddOverlayPayload(pos, tag));
     }
 

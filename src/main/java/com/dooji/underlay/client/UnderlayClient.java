@@ -13,6 +13,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -42,8 +43,8 @@ public class UnderlayClient {
     }
 
     public static void handleSyncPacket(SyncOverlaysPayload payload) {
-        var client = Minecraft.getInstance();
-        var map = payload.tags().entrySet().stream()
+        Minecraft client = Minecraft.getInstance();
+        Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         e -> NbtUtils.readBlockState(
@@ -60,8 +61,8 @@ public class UnderlayClient {
     public static void handleAddPacket(AddOverlayPayload payload) {
         BlockPos pos = payload.pos();
 
-        var client = Minecraft.getInstance();
-        var state = NbtUtils.readBlockState(
+        Minecraft client = Minecraft.getInstance();
+        BlockState state = NbtUtils.readBlockState(
                 client.level.holderLookup(Registries.BLOCK),
                 payload.stateTag()
         );
@@ -73,8 +74,8 @@ public class UnderlayClient {
 
     public static void handleRemovePacket(RemoveOverlayPayload payload) {
         BlockPos pos = payload.pos();
-        var client = Minecraft.getInstance();
-        var state = UnderlayManagerClient.getOverlay(pos);
+        Minecraft client = Minecraft.getInstance();
+        BlockState state = UnderlayManagerClient.getOverlay(pos);
 
         UnderlayRenderer.unregisterOverlay(pos);
         UnderlayManagerClient.syncRemove(pos);

@@ -33,7 +33,7 @@ public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) implements Cu
 
     public void write(RegistryFriendlyByteBuf buf) {
         buf.writeVarInt(tags.size());
-        for (var e : tags.entrySet()) {
+        for (Map.Entry<BlockPos, CompoundTag> e : tags.entrySet()) {
             buf.writeBlockPos(e.getKey());
             buf.writeNbt(e.getValue());
         }

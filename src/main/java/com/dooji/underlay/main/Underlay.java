@@ -21,7 +21,7 @@ public class Underlay {
     public static final String MOD_ID = "underlay";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "overlay"));
+    public static final TagKey<Block> OVERLAY_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "overlay"));
     public static final TagKey<Block> EXCLUDE_TAG = TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(MOD_ID, "exclude"));
 
     public Underlay() {
@@ -35,19 +35,7 @@ public class Underlay {
         for (ServerLevel world : event.getServer().getAllLevels()) {
             LOGGER.info("Loading overlays for world: " + world.dimension().location());
             UnderlayManager.loadOverlays(world);
-            reloadDatapackBlocks(world);
+            UnderlayConfig.load(world);
         }
-    }
-
-    private static void reloadDatapackBlocks(ServerLevel world) {
-        UnderlayApi.CUSTOM_BLOCKS_DP.clear();
-        var blocks = world.registryAccess().registryOrThrow(BuiltInRegistries.BLOCK.key());
-
-        blocks.getTag(OVERLAY_TAG).ifPresent(tag -> tag.forEach(entry -> {
-            Block block = entry.value();
-            if (!blocks.getOrCreateTag(EXCLUDE_TAG).contains(entry)) {
-                UnderlayApi.registerDatapackOverlayBlock(block);
-            }
-        }));
     }
 }
