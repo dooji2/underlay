@@ -12,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -44,8 +46,8 @@ public class UnderlayClient {
     }
 
     public static void handleSyncPacket(SyncOverlaysPayload payload) {
-        var client = Minecraft.getInstance();
-        var map = payload.tags().entrySet().stream()
+        Minecraft client = Minecraft.getInstance();
+        Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
             .collect(Collectors.toMap(
                     Map.Entry::getKey,
                     e -> NbtUtils.readBlockState(
@@ -62,8 +64,8 @@ public class UnderlayClient {
     public static void handleAddPacket(AddOverlayPayload payload) {
         BlockPos pos = payload.pos();
 
-        var client = Minecraft.getInstance();
-        var state = NbtUtils.readBlockState(
+        Minecraft client = Minecraft.getInstance();
+        BlockState state = NbtUtils.readBlockState(
                 client.level.holderLookup(Registries.BLOCK),
                 payload.stateTag()
         );
@@ -75,8 +77,8 @@ public class UnderlayClient {
 
     public static void handleRemovePacket(RemoveOverlayPayload payload) {
         BlockPos pos = payload.pos();
-        var client = Minecraft.getInstance();
-        var state = UnderlayManagerClient.getOverlay(pos);
+        Minecraft client = Minecraft.getInstance();
+        BlockState state = UnderlayManagerClient.getOverlay(pos);
 
         UnderlayRenderer.unregisterOverlay(pos);
         UnderlayManagerClient.syncRemove(pos);
@@ -127,7 +129,7 @@ public class UnderlayClient {
     }
 
     public static BlockPos findOverlayUnderCrosshair(Minecraft client) {
-        var hit = UnderlayRaycast.trace(client.player, client.gameMode.getPickRange(), client.getFrameTime());
+        BlockHitResult hit = UnderlayRaycast.trace(client.player, client.gameMode.getPickRange(), client.getFrameTime());
         return hit == null ? null : hit.getBlockPos();
     }
 }

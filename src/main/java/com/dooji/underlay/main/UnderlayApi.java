@@ -1,20 +1,23 @@
 package com.dooji.underlay.main;
 
 import java.util.Set;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.block.*;
-
-import static com.dooji.underlay.main.Underlay.EXCLUDE_TAG;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.CarpetBlock;
+import net.minecraft.world.level.block.PressurePlateBlock;
+import net.minecraft.world.level.block.RailBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 
 public class UnderlayApi {
     static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
     static final Set<Block> CUSTOM_BLOCKS_DP = ConcurrentHashMap.newKeySet();
+    static final Set<Block> CUSTOM_BLOCKS_EXCLUDE = ConcurrentHashMap.newKeySet();
+    static final Set<Block> CUSTOM_BLOCKS_EXCLUDE_DP = ConcurrentHashMap.newKeySet();
 
-    public static void registerOverlayBlock(Block block) {
+    static void registerOverlayBlock(Block block) {
         if (block == null) {
             return;
         }
@@ -30,20 +33,48 @@ public class UnderlayApi {
         CUSTOM_BLOCKS_DP.add(block);
     }
 
+    static void clearLoadedBlocks() {
+        CUSTOM_BLOCKS.clear();
+        CUSTOM_BLOCKS_DP.clear();
+        CUSTOM_BLOCKS_EXCLUDE.clear();
+        CUSTOM_BLOCKS_EXCLUDE_DP.clear();
+    }
+
+    static void registerExcludedBlock(Block block) {
+        if (block == null) {
+            return;
+        }
+
+        CUSTOM_BLOCKS_EXCLUDE.add(block);
+    }
+
+    static void registerDatapackExcludedBlock(Block block) {
+        if (block == null) {
+            return;
+        }
+
+        CUSTOM_BLOCKS_EXCLUDE_DP.add(block);
+    }
+
     public static boolean isOverlayBlock(Block block) {
         if (block == null) {
             return false;
         }
 
-        if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_DP.contains(block)) {
+        if (CUSTOM_BLOCKS_EXCLUDE.contains(block)) {
+            return false;
+        }
+
+        if (CUSTOM_BLOCKS_EXCLUDE_DP.contains(block)) {
+            return false;
+        }
+
+        if (CUSTOM_BLOCKS.contains(block)) {
             return true;
         }
 
-        Optional<HolderSet.Named<Block>> maybeExcluded = BuiltInRegistries.BLOCK.getTag(EXCLUDE_TAG);
-        if (maybeExcluded.map(named ->
-                named.stream().anyMatch(holder -> holder.value() == block)
-        ).orElse(false)) {
-            return false;
+        if (CUSTOM_BLOCKS_DP.contains(block)) {
+            return true;
         }
 
         return block instanceof CarpetBlock

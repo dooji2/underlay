@@ -11,7 +11,7 @@ public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) {
     public static void write(SyncOverlaysPayload message, FriendlyByteBuf buf) {
         buf.writeInt(message.tags.size());
 
-        for (var entry : message.tags.entrySet()) {
+        for (Map.Entry<BlockPos, CompoundTag> entry : message.tags.entrySet()) {
             buf.writeBlockPos(entry.getKey());
             buf.writeNbt(entry.getValue());
         }
