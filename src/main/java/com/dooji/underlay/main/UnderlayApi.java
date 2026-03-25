@@ -15,9 +15,9 @@ import net.minecraft.block.BlockTrapDoor;
 
 public class UnderlayApi {
     static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
-    static final Set<Block> CUSTOM_BLOCKS_CONFIG = ConcurrentHashMap.newKeySet();
+    static final Set<Block> CUSTOM_BLOCKS_EXCLUDE = ConcurrentHashMap.newKeySet();
 
-    public static void registerOverlayBlock(Block block) {
+    static void registerOverlayBlock(Block block) {
         if (block == null) {
             return;
         }
@@ -25,12 +25,17 @@ public class UnderlayApi {
         CUSTOM_BLOCKS.add(block);
     }
 
-    static void registerConfigOverlayBlock(Block block) {
+    static void clearLoadedBlocks() {
+        CUSTOM_BLOCKS.clear();
+        CUSTOM_BLOCKS_EXCLUDE.clear();
+    }
+
+    static void registerExcludedBlock(Block block) {
         if (block == null) {
             return;
         }
 
-        CUSTOM_BLOCKS_CONFIG.add(block);
+        CUSTOM_BLOCKS_EXCLUDE.add(block);
     }
 
     public static boolean isOverlayBlock(Block block) {
@@ -38,7 +43,11 @@ public class UnderlayApi {
             return false;
         }
 
-        if (CUSTOM_BLOCKS.contains(block) || CUSTOM_BLOCKS_CONFIG.contains(block)) {
+        if (CUSTOM_BLOCKS_EXCLUDE.contains(block)) {
+            return false;
+        }
+
+        if (CUSTOM_BLOCKS.contains(block)) {
             return true;
         }
 
