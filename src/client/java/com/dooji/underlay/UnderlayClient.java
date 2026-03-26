@@ -22,6 +22,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import java.util.stream.Collectors;
 
 public class UnderlayClient implements ClientModInitializer {
 	private static final boolean IS_FLASHBACK_INSTALLED = FabricLoader.getInstance().isModLoaded("flashback");
@@ -35,7 +36,7 @@ public class UnderlayClient implements ClientModInitializer {
 			client.execute(() -> {
 				RegistryEntryLookup<Block> lookup = (RegistryEntryLookup<Block>) client.getNetworkHandler().getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
-					.collect(java.util.stream.Collectors.toMap(
+					.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						e -> NbtHelper.toBlockState(lookup, e.getValue())
 					));
@@ -64,7 +65,7 @@ public class UnderlayClient implements ClientModInitializer {
 			MinecraftClient client = MinecraftClient.getInstance();
 			client.execute(() -> {
 				BlockPos pos = payload.pos();
-				var state = UnderlayManagerClient.getOverlay(pos);
+				BlockState state = UnderlayManagerClient.getOverlay(pos);
 
 				UnderlayRenderer.unregisterOverlay(pos);
 				UnderlayManagerClient.syncRemove(pos);
