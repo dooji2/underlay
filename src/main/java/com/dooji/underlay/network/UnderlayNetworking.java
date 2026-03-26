@@ -49,7 +49,7 @@ public class UnderlayNetworking {
 
 		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
 			ServerPlayer player = context.player();
-			ServerLevel world = player.level();
+			ServerLevel world = (ServerLevel) player.level();
 			BlockPos pos = payload.pos();
 
 			if (!world.mayInteract(player, pos)) {
@@ -57,7 +57,7 @@ public class UnderlayNetworking {
 			}
 
 			if (UnderlayManager.hasOverlay(world, pos)) {
-				var old = UnderlayManager.getOverlay(world, pos);
+				BlockState old = UnderlayManager.getOverlay(world, pos);
 				UnderlayManager.removeOverlay(world, pos);
 				
 				if (!player.isCreative()) {
@@ -70,7 +70,7 @@ public class UnderlayNetworking {
 
 		ServerPlayNetworking.registerGlobalReceiver(PickItemFromOverlayPayload.ID, (payload, context) -> {
 			ServerPlayer player = context.player();
-			ServerLevel world = player.level();
+			ServerLevel world = (ServerLevel) player.level();
 			BlockPos pos = payload.pos();
 
 			if (!world.mayInteract(player, pos)) {
@@ -109,7 +109,7 @@ public class UnderlayNetworking {
 	}
 
 	public static void syncOverlaysToPlayer(ServerPlayer player) {
-		var world = player.level();
+		ServerLevel world = (ServerLevel) player.level();
 
 		Map<BlockPos, CompoundTag> tags = new HashMap<>();
 		UnderlayManager.getOverlaysFor(world).forEach((pos, state) ->
@@ -120,8 +120,8 @@ public class UnderlayNetworking {
 	}
 
 	public static void broadcastAdd(ServerLevel world, BlockPos pos) {
-		var tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
-		var payload = new AddOverlayPayload(pos, tag);
+		CompoundTag tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
+		AddOverlayPayload payload = new AddOverlayPayload(pos, tag);
 
 		for (ServerPlayer p : world.players()) {
 			ServerPlayNetworking.send(p, payload);
@@ -129,7 +129,7 @@ public class UnderlayNetworking {
 	}
 
 	private static void broadcastRemove(ServerLevel world, BlockPos pos) {
-		var payload = new RemoveOverlayPayload(pos);
+		RemoveOverlayPayload payload = new RemoveOverlayPayload(pos);
 
 		for (ServerPlayer p : world.players()) {
 			ServerPlayNetworking.send(p, payload);

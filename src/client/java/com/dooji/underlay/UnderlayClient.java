@@ -1,6 +1,7 @@
 package com.dooji.underlay;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.dooji.underlay.flashback.FlashbackCompat;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
@@ -35,7 +36,7 @@ public class UnderlayClient implements ClientModInitializer {
 			client.execute(() -> {
 				HolderLookup<Block> lookup = client.getConnection().registryAccess().lookupOrThrow(Registries.BLOCK);
 				Map<BlockPos, BlockState> map = payload.tags().entrySet().stream()
-					.collect(java.util.stream.Collectors.toMap(
+					.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						e -> NbtUtils.readBlockState(lookup, e.getValue())
 					));
@@ -64,7 +65,7 @@ public class UnderlayClient implements ClientModInitializer {
 			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
 				BlockPos pos = payload.pos();
-				var state = UnderlayManagerClient.getOverlay(pos);
+				BlockState state = UnderlayManagerClient.getOverlay(pos);
 
 				UnderlayRenderer.unregisterOverlay(pos);
 				UnderlayManagerClient.syncRemove(pos);

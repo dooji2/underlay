@@ -18,7 +18,7 @@ public record SyncOverlaysPayload(Map<BlockPos, CompoundTag> tags) implements Cu
         (buf, payload) -> {
             buf.writeVarInt(payload.tags().size());
             
-            for (var e : payload.tags().entrySet()) {
+            for (Map.Entry<BlockPos, CompoundTag> e : payload.tags().entrySet()) {
                 buf.writeBlockPos(e.getKey());
                 buf.writeNbt(e.getValue());
             }
