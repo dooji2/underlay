@@ -62,7 +62,7 @@ public class UnderlayClient implements ClientModInitializer {
 			MinecraftClient client = MinecraftClient.getInstance();
 			client.execute(() -> {
 				BlockPos pos = payload.pos();
-				var state = UnderlayManagerClient.getOverlay(pos);
+				BlockState state = UnderlayManagerClient.getOverlay(pos);
 
 				UnderlayRenderer.unregisterOverlay(pos);
 				UnderlayManagerClient.syncRemove(pos);
