@@ -53,7 +53,7 @@ public class UnderlayManager {
             UnderlayNetworking.broadcastAdd((WorldServer) world, pos);
 
             if (!world.isRemote && world instanceof WorldServer) {
-                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                UnderlayPersistenceHandler.markDirty(world, worldOverlays);
             }
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
@@ -75,7 +75,7 @@ public class UnderlayManager {
         try {
             worldOverlays.put(pos, blockState);
             UnderlayNetworking.broadcastAdd((WorldServer) world, pos);
-            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+            UnderlayPersistenceHandler.markDirty(world, worldOverlays);
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
         }
@@ -94,7 +94,7 @@ public class UnderlayManager {
                 worldOverlays.remove(pos);
 
                 if (!world.isRemote && world instanceof WorldServer) {
-                    UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                    UnderlayPersistenceHandler.markDirty(world, worldOverlays);
                 }
 
                 return true;

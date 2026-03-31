@@ -1,5 +1,7 @@
 package com.dooji.underlay.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,9 +22,6 @@ import org.lwjgl.opengl.GL11;
 public class UnderlayRenderer {
     private static final Map<BlockPos, IBlockState> RENDER_CACHE = new ConcurrentHashMap<BlockPos, IBlockState>();
 
-    private static long lastFullRefreshTime = 0;
-    private static final long FULL_REFRESH_INTERVAL = 500;
-
     public static void registerOverlay(BlockPos pos, IBlockState state) {
         RENDER_CACHE.put(pos, state);
     }
@@ -36,32 +35,8 @@ public class UnderlayRenderer {
     }
 
     public static void forceRefresh() {
-        lastFullRefreshTime = System.currentTimeMillis();
         clearAllOverlays();
-
-        Minecraft client = Minecraft.getMinecraft();
-        if (client.world != null && client.player != null) {
-            BlockPos playerPos = client.player.getPosition();
-            int radius = 64;
-
-            for (int x = -radius; x <= radius; x++) {
-                for (int y = -16; y <= 16; y++) {
-                    for (int z = -radius; z <= radius; z++) {
-                        BlockPos pos = playerPos.add(x, y, z);
-                        if (UnderlayManagerClient.hasOverlay(pos)) {
-                            registerOverlay(pos, UnderlayManagerClient.getOverlay(pos));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void checkForFullRefresh() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFullRefreshTime > FULL_REFRESH_INTERVAL) {
-            forceRefresh();
-        }
+        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
     }
 
     public static void renderLayer(BlockRenderLayer layer, double partialTicks) {
@@ -69,8 +44,6 @@ public class UnderlayRenderer {
         if (client.world == null || client.player == null) {
             return;
         }
-
-        checkForFullRefresh();
 
         double dx = client.player.lastTickPosX + (client.player.posX - client.player.lastTickPosX) * partialTicks;
         double dy = client.player.lastTickPosY + (client.player.posY - client.player.lastTickPosY) * partialTicks;
@@ -90,13 +63,17 @@ public class UnderlayRenderer {
 
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
+        List<BlockPos> stalePositions = new ArrayList<BlockPos>();
+        boolean renderedAny = false;
 
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+        buffer.setTranslation(-dx, -dy, -dz);
         for (Map.Entry<BlockPos, IBlockState> entry : RENDER_CACHE.entrySet()) {
             BlockPos pos = entry.getKey();
             IBlockState state = entry.getValue();
 
             if (!UnderlayManagerClient.hasOverlay(pos)) {
-                RENDER_CACHE.remove(pos);
+                stalePositions.add(pos);
                 continue;
             }
 
@@ -114,18 +91,18 @@ public class UnderlayRenderer {
                 continue;
             }
 
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(-dx, -dy, -dz);
-            GlStateManager.translate(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-            GlStateManager.scale(1.001f, 1.001f, 1.001f);
-            GlStateManager.translate(-pos.getX() - 0.5, -pos.getY() - 0.5, -pos.getZ() - 0.5);
+            renderedAny |= dispatcher.renderBlock(state, pos, client.world, buffer);
+        }
 
-            buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
-            dispatcher.renderBlock(state, pos, client.world, buffer);
+        if (renderedAny) {
             tessellator.draw();
-            buffer.setTranslation(0, 0, 0);
+        } else {
+            buffer.finishDrawing();
+        }
+        buffer.setTranslation(0, 0, 0);
 
-            GlStateManager.popMatrix();
+        for (BlockPos stalePos : stalePositions) {
+            unregisterOverlay(stalePos);
         }
 
         client.entityRenderer.disableLightmap();

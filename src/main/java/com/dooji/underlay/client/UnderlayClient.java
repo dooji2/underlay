@@ -50,10 +50,7 @@ public class UnderlayClient {
         }
 
         UnderlayManagerClient.sync(map);
-        UnderlayRenderer.clearAllOverlays();
-        for (Map.Entry<BlockPos, IBlockState> entry : UnderlayManagerClient.getAll().entrySet()) {
-            UnderlayRenderer.registerOverlay(entry.getKey(), entry.getValue());
-        }
+        UnderlayRenderer.forceRefresh();
     }
 
     public static void handleAddPacket(AddOverlayPayload payload) {
