@@ -2,9 +2,6 @@ package com.dooji.underlay;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.dooji.underlay.network.UnderlayNetworking;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -14,6 +11,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import com.dooji.underlay.network.UnderlayNetworking;
 
 public class UnderlayManager {
     private static final Map<String, Map<BlockPos, BlockState>> OVERLAYS = new ConcurrentHashMap<>();
@@ -46,7 +44,7 @@ public class UnderlayManager {
             UnderlayNetworking.broadcastAdd((ServerWorld)world, pos);
 
             if (!world.isClient() && world instanceof ServerWorld) {
-                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                UnderlayPersistenceHandler.markDirty(world);
             }
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
@@ -68,7 +66,7 @@ public class UnderlayManager {
         try {
             worldOverlays.put(pos.toImmutable(), blockState);
             UnderlayNetworking.broadcastAdd(world, pos);
-            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+            UnderlayPersistenceHandler.markDirty(world);
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
         }
@@ -87,7 +85,7 @@ public class UnderlayManager {
                 worldOverlays.remove(pos);
 
                 if (!world.isClient() && world instanceof ServerWorld) {
-                    UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                    UnderlayPersistenceHandler.markDirty(world);
                 }
 
                 return true;

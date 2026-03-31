@@ -1,6 +1,7 @@
 package com.dooji.underlay;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.dooji.underlay.flashback.FlashbackCompat;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
@@ -22,7 +23,6 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
-import java.util.stream.Collectors;
 
 public class UnderlayClient implements ClientModInitializer {
 	private static final boolean IS_FLASHBACK_INSTALLED = FabricLoader.getInstance().isModLoaded("flashback");
@@ -42,9 +42,7 @@ public class UnderlayClient implements ClientModInitializer {
 					));
 
 				UnderlayManagerClient.sync(map);
-
-				UnderlayRenderer.clearAllOverlays();
-				UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
+				UnderlayRenderer.forceRefresh();
 			});
 		});
 

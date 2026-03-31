@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.nbt.NbtCompound;
@@ -27,6 +27,8 @@ import net.minecraft.world.World;
 
 public class UnderlayPersistenceHandler {
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
+    private static final long SAVE_DEBOUNCE_TICKS = 20;
+    private static final Map<String, PendingSave> PENDING_SAVES = new ConcurrentHashMap<>();
 
     private static String getSaveFileName(World world) {
         String dimensionId = world.getRegistryKey().getValue().toString();
@@ -90,6 +92,47 @@ public class UnderlayPersistenceHandler {
                     Underlay.LOGGER.warn("Overlay save interrupted", ie);
                     break;
                 }
+            }
+        }
+    }
+
+    public static void markDirty(World world) {
+        if (!(world instanceof ServerWorld serverWorld)) {
+            return;
+        }
+
+        PENDING_SAVES.put(getDimensionKey(serverWorld), new PendingSave(serverWorld, serverWorld.getTime() + SAVE_DEBOUNCE_TICKS));
+    }
+
+    public static void flushPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (pendingSave.world.getTime() < pendingSave.saveTick) {
+                continue;
+            }
+
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
+            }
+        }
+    }
+
+    public static void flushPendingSave(World world) {
+        if (!(world instanceof ServerWorld serverWorld)) {
+            return;
+        }
+
+        PendingSave pendingSave = PENDING_SAVES.remove(getDimensionKey(serverWorld));
+        if (pendingSave != null) {
+            saveOverlays(serverWorld, UnderlayManager.getOverlaysFor(serverWorld));
+        }
+    }
+
+    public static void flushAllPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
             }
         }
     }
@@ -161,5 +204,19 @@ public class UnderlayPersistenceHandler {
         }
 
         return overlays;
+    }
+
+    private static String getDimensionKey(ServerWorld world) {
+        return world.getRegistryKey().getValue().toString();
+    }
+
+    private static class PendingSave {
+        private final ServerWorld world;
+        private final long saveTick;
+
+        private PendingSave(ServerWorld world, long saveTick) {
+            this.world = world;
+            this.saveTick = saveTick;
+        }
     }
 }
