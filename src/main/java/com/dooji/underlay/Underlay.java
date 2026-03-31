@@ -2,6 +2,7 @@ package com.dooji.underlay;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.block.Block;
 import net.minecraft.registry.RegistryKeys;
@@ -23,12 +24,16 @@ public class Underlay implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		UnderlayNetworking.init();
-		
+
 		ServerWorldEvents.LOAD.register((server, world) -> {
 			LOGGER.info("Loading overlays for world: " + world.getRegistryKey().getValue());
 			UnderlayManager.loadOverlays(world);
 			UnderlayConfig.load(world);
 		});
+
+		ServerTickEvents.END_SERVER_TICK.register(server -> UnderlayPersistenceHandler.flushPendingSaves());
+		ServerWorldEvents.UNLOAD.register((server, world) -> UnderlayPersistenceHandler.flushPendingSave(world));
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> UnderlayPersistenceHandler.flushAllPendingSaves());
 
 		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             if (!success) {

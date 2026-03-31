@@ -46,7 +46,7 @@ public class UnderlayManager {
             UnderlayNetworking.broadcastAdd((ServerWorld)world, pos);
 
             if (!world.isClient() && world instanceof ServerWorld) {
-                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                UnderlayPersistenceHandler.markDirty(world);
             }
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
@@ -68,7 +68,7 @@ public class UnderlayManager {
         try {
             worldOverlays.put(pos.toImmutable(), blockState);
             UnderlayNetworking.broadcastAdd(world, pos);
-            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+            UnderlayPersistenceHandler.markDirty(world);
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
         }
@@ -87,7 +87,7 @@ public class UnderlayManager {
                 worldOverlays.remove(pos);
 
                 if (!world.isClient() && world instanceof ServerWorld) {
-                    UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                    UnderlayPersistenceHandler.markDirty(world);
                 }
 
                 return true;

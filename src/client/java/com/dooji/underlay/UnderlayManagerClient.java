@@ -8,20 +8,25 @@ import net.minecraft.util.math.BlockPos;
 
 public class UnderlayManagerClient {
     private static final Map<BlockPos, BlockState> OVERLAYS = new ConcurrentHashMap<>();
+    private static volatile long version = 0;
 
     public static void sync(Map<BlockPos, BlockState> stateMap) {
         OVERLAYS.clear();
         stateMap.forEach((pos, state) ->
             OVERLAYS.put(pos, state)
         );
+
+        version++;
     }
 
     public static void syncAdd(BlockPos pos, BlockState state) {
         OVERLAYS.put(pos, state);
+        version++;
     }
 
     public static void syncRemove(BlockPos pos) {
         OVERLAYS.remove(pos);
+        version++;
     }
 
     public static boolean hasOverlay(BlockPos pos) {
@@ -38,5 +43,10 @@ public class UnderlayManagerClient {
 
     public static void removeAll() {
         OVERLAYS.clear();
+        version++;
+    }
+
+    public static long getVersion() {
+        return version;
     }
 }
