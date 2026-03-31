@@ -37,9 +37,7 @@ import net.minecraft.world.phys.Vec3;
 public class UnderlayRenderer {
     private static final RandomSource RANDOM = RandomSource.create();
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
-
-    private static long lastFullRefreshTime = 0;
-    private static final long FULL_REFRESH_INTERVAL = 500;
+    private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
 
     private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
 
@@ -50,43 +48,22 @@ public class UnderlayRenderer {
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         RENDER_CACHE.put(pos.immutable(), state);
+        BLOCK_ENTITY_CACHE.remove(pos);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
         RENDER_CACHE.remove(pos);
+        BLOCK_ENTITY_CACHE.remove(pos);
     }
 
     public static void clearAllOverlays() {
         RENDER_CACHE.clear();
+        BLOCK_ENTITY_CACHE.clear();
     }
 
     public static void forceRefresh() {
-        lastFullRefreshTime = System.currentTimeMillis();
         clearAllOverlays();
-
-        Minecraft client = Minecraft.getInstance();
-        if (client.level != null && client.player != null) {
-            BlockPos playerPos = client.player.blockPosition();
-            int radius = 64;
-
-            for (int x = -radius; x <= radius; x++) {
-                for (int y = -16; y <= 16; y++) {
-                    for (int z = -radius; z <= radius; z++) {
-                        BlockPos pos = playerPos.offset(x, y, z);
-                        if (UnderlayManagerClient.hasOverlay(pos)) {
-                            registerOverlay(pos, UnderlayManagerClient.getOverlay(pos));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void checkForFullRefresh() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFullRefreshTime > FULL_REFRESH_INTERVAL) {
-            forceRefresh();
-        }
+        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
     }
 
     private static boolean isShadersActive() {
@@ -143,13 +120,13 @@ public class UnderlayRenderer {
         boolean useEntityRendering = isShadersActive();
 
         ClientLevel world = client.level;
-        checkForFullRefresh();
         BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
         if (renderBlockEntities) {
             blockEntityRenderDispatcher.prepare(client.gameRenderer.getMainCamera());
         }
 
         matrices.pushPose();
+        List<BlockModelPart> parts = useEntityRendering ? null : new ArrayList<>();
 
         for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
             BlockPos pos = entry.getKey();
@@ -163,11 +140,6 @@ public class UnderlayRenderer {
                 continue;
             }
 
-            if (!UnderlayManagerClient.hasOverlay(pos)) {
-                RENDER_CACHE.remove(pos);
-                continue;
-            }
-
             matrices.pushPose();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
@@ -176,26 +148,25 @@ public class UnderlayRenderer {
                 matrices.scale(1.0001f, 1.0001f, 1.0001f);
                 matrices.translate(-0.5, -0.5, -0.5);
 
-                BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
-                List<BlockModelPart> parts = new ArrayList<>();
-                RANDOM.setSeed(state.getSeed(pos));
-                model.collectParts(RANDOM, parts);
-
-                RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
-                VertexConsumer buffer = vertexConsumers.getBuffer(layer);
                 int light = LevelRenderer.getLightColor(world, pos);
                 if (useEntityRendering) {
                     blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
                 } else {
+                    BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
+                    parts.clear();
+                    RANDOM.setSeed(state.getSeed(pos));
+                    model.collectParts(RANDOM, parts);
+
+                    RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
+                    VertexConsumer buffer = vertexConsumers.getBuffer(layer);
                     blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
                     if (usedRenderTypes != null) {
                         usedRenderTypes.add(layer);
                     }
                 }
             } else if (commandQueue != null && state.getBlock() instanceof EntityBlock entityBlock) {
-                BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
+                BlockEntity blockEntity = getOrCreateBlockEntity(world, pos, state, entityBlock);
                 if (blockEntity != null) {
-                    blockEntity.setLevel(world);
                     BlockEntityRenderState blockEntityRenderState = blockEntityRenderDispatcher.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
                     if (blockEntityRenderState != null) {
                         blockEntityRenderDispatcher.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
@@ -212,6 +183,37 @@ public class UnderlayRenderer {
     private static class IrisHelper {
         public static boolean isShaderPackInUse() {
             return IrisApi.getInstance().isShaderPackInUse();
+        }
+    }
+
+    private static BlockEntity getOrCreateBlockEntity(ClientLevel world, BlockPos pos, BlockState state, EntityBlock entityBlock) {
+        CachedBlockEntity cached = BLOCK_ENTITY_CACHE.get(pos);
+        if (cached != null && cached.state.equals(state)) {
+            if (cached.blockEntity.getLevel() != world) {
+                cached.blockEntity.setLevel(world);
+            }
+            
+            return cached.blockEntity;
+        }
+
+        BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
+        if (blockEntity == null) {
+            BLOCK_ENTITY_CACHE.remove(pos);
+            return null;
+        }
+
+        blockEntity.setLevel(world);
+        BLOCK_ENTITY_CACHE.put(pos.immutable(), new CachedBlockEntity(state, blockEntity));
+        return blockEntity;
+    }
+
+    private static class CachedBlockEntity {
+        private final BlockState state;
+        private final BlockEntity blockEntity;
+
+        private CachedBlockEntity(BlockState state, BlockEntity blockEntity) {
+            this.state = state;
+            this.blockEntity = blockEntity;
         }
     }
 }
