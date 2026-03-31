@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -21,6 +22,8 @@ import net.minecraft.core.BlockPos;
 
 public class UnderlayPersistenceHandler {
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
+    private static final long SAVE_DEBOUNCE_TICKS = 20;
+    private static final Map<String, PendingSave> PENDING_SAVES = new ConcurrentHashMap<>();
 
     private static String getSaveFileName(Level world) {
         String dimensionId = world.dimension().location().toString();
@@ -85,6 +88,47 @@ public class UnderlayPersistenceHandler {
         }
     }
 
+    public static void markDirty(Level world) {
+        if (!(world instanceof ServerLevel serverWorld)) {
+            return;
+        }
+
+        PENDING_SAVES.put(getDimensionKey(serverWorld), new PendingSave(serverWorld, serverWorld.getGameTime() + SAVE_DEBOUNCE_TICKS));
+    }
+
+    public static void flushPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (pendingSave.world.getGameTime() < pendingSave.saveTick) {
+                continue;
+            }
+
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
+            }
+        }
+    }
+
+    public static void flushPendingSave(Level world) {
+        if (!(world instanceof ServerLevel serverWorld)) {
+            return;
+        }
+
+        PendingSave pendingSave = PENDING_SAVES.remove(getDimensionKey(serverWorld));
+        if (pendingSave != null) {
+            saveOverlays(serverWorld, UnderlayManager.getOverlaysFor(serverWorld));
+        }
+    }
+
+    public static void flushAllPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
+            }
+        }
+    }
+
     public static Map<BlockPos, BlockState> loadOverlays(Level world) {
         Map<BlockPos, BlockState> overlays = new HashMap<>();
 
@@ -145,5 +189,19 @@ public class UnderlayPersistenceHandler {
         }
 
         return overlays;
+    }
+
+    private static String getDimensionKey(ServerLevel world) {
+        return world.dimension().location().toString();
+    }
+
+    private static class PendingSave {
+        private final ServerLevel world;
+        private final long saveTick;
+
+        private PendingSave(ServerLevel world, long saveTick) {
+            this.world = world;
+            this.saveTick = saveTick;
+        }
     }
 }

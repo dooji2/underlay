@@ -8,7 +8,10 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -44,5 +47,24 @@ public class Underlay {
             UnderlayManager.loadOverlays(world);
             UnderlayConfig.load(world);
         }
+    }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            UnderlayPersistenceHandler.flushPendingSaves();
+        }
+    }
+
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel world) {
+            UnderlayPersistenceHandler.flushPendingSave(world);
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        UnderlayPersistenceHandler.flushAllPendingSaves();
     }
 }

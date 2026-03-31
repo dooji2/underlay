@@ -57,8 +57,7 @@ public class UnderlayClient {
             ));
 
         UnderlayManagerClient.sync(map);
-        UnderlayRenderer.clearAllOverlays();
-        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
+        UnderlayRenderer.forceRefresh();
     }
 
     public static void handleAddPacket(AddOverlayPayload payload) {

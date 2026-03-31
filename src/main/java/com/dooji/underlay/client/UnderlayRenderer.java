@@ -28,9 +28,7 @@ import net.minecraftforge.common.MinecraftForge;
 
 public class UnderlayRenderer {
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
-
-    private static long lastFullRefreshTime = 0;
-    private static final long FULL_REFRESH_INTERVAL = 500;
+    private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
 
     public static void init() {
         MinecraftForge.EVENT_BUS.addListener(UnderlayRenderer::onRenderLevel);
@@ -38,43 +36,22 @@ public class UnderlayRenderer {
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         RENDER_CACHE.put(pos.immutable(), state);
+        BLOCK_ENTITY_CACHE.remove(pos);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
         RENDER_CACHE.remove(pos);
+        BLOCK_ENTITY_CACHE.remove(pos);
     }
 
     public static void clearAllOverlays() {
         RENDER_CACHE.clear();
+        BLOCK_ENTITY_CACHE.clear();
     }
 
     public static void forceRefresh() {
-        lastFullRefreshTime = System.currentTimeMillis();
         clearAllOverlays();
-
-        Minecraft client = Minecraft.getInstance();
-        if (client.level != null && client.player != null) {
-            BlockPos playerPos = client.player.blockPosition();
-            int radius = 64;
-
-            for (int x = -radius; x <= radius; x++) {
-                for (int y = -16; y <= 16; y++) {
-                    for (int z = -radius; z <= radius; z++) {
-                        BlockPos pos = playerPos.offset(x, y, z);
-                        if (UnderlayManagerClient.hasOverlay(pos)) {
-                            registerOverlay(pos, UnderlayManagerClient.getOverlay(pos));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void checkForFullRefresh() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFullRefreshTime > FULL_REFRESH_INTERVAL) {
-            forceRefresh();
-        }
+        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
     }
 
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -113,8 +90,6 @@ public class UnderlayRenderer {
             return;
         }
 
-        checkForFullRefresh();
-
         poseStack.pushPose();
 
         for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
@@ -126,11 +101,6 @@ public class UnderlayRenderer {
             double maxDistSq = (double)blocks * blocks;
             double distanceSq = pos.distSqr(client.player.blockPosition());
             if (distanceSq > maxDistSq) {
-                continue;
-            }
-
-            if (!UnderlayManagerClient.hasOverlay(pos)) {
-                RENDER_CACHE.remove(pos);
                 continue;
             }
 
@@ -153,9 +123,8 @@ public class UnderlayRenderer {
                     usedRenderTypes.add(movingRenderType);
                 }
             } else if (state.getBlock() instanceof EntityBlock entityBlock) {
-                BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
+                BlockEntity blockEntity = getOrCreateBlockEntity(pos, state, entityBlock);
                 if (blockEntity != null) {
-                    blockEntity.setLevel(client.level);
                     blockEntityRenderer.render(blockEntity, 0.0F, poseStack, bufferSource);
                 }
             }
@@ -172,5 +141,41 @@ public class UnderlayRenderer {
         }
 
         poseStack.popPose();
+    }
+
+    private static BlockEntity getOrCreateBlockEntity(BlockPos pos, BlockState state, EntityBlock entityBlock) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
+            return null;
+        }
+
+        CachedBlockEntity cached = BLOCK_ENTITY_CACHE.get(pos);
+        if (cached != null && cached.state.equals(state)) {
+            if (cached.blockEntity.getLevel() != client.level) {
+                cached.blockEntity.setLevel(client.level);
+            }
+
+            return cached.blockEntity;
+        }
+
+        BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
+        if (blockEntity == null) {
+            BLOCK_ENTITY_CACHE.remove(pos);
+            return null;
+        }
+
+        blockEntity.setLevel(client.level);
+        BLOCK_ENTITY_CACHE.put(pos.immutable(), new CachedBlockEntity(state, blockEntity));
+        return blockEntity;
+    }
+
+    private static class CachedBlockEntity {
+        private final BlockState state;
+        private final BlockEntity blockEntity;
+
+        private CachedBlockEntity(BlockState state, BlockEntity blockEntity) {
+            this.state = state;
+            this.blockEntity = blockEntity;
+        }
     }
 }

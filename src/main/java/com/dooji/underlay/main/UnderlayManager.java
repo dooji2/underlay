@@ -46,7 +46,7 @@ public class UnderlayManager {
             UnderlayNetworking.broadcastAdd((ServerLevel)world, pos);
 
             if (!world.isClientSide() && world instanceof ServerLevel) {
-                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                UnderlayPersistenceHandler.markDirty(world);
             }
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add overlay at " + pos, e);
@@ -68,7 +68,7 @@ public class UnderlayManager {
         try {
             worldOverlays.put(pos.immutable(), blockState);
             UnderlayNetworking.broadcastAdd((ServerLevel)world, pos);
-            UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+            UnderlayPersistenceHandler.markDirty(world);
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add structure overlay at " + pos, e);
         }
@@ -91,7 +91,7 @@ public class UnderlayManager {
 
             if (!world.isClientSide() && world instanceof ServerLevel serverLevel) {
                 UnderlayNetworking.broadcastAdd(serverLevel, pos);
-                UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                UnderlayPersistenceHandler.markDirty(world);
             }
         } catch (Exception e) {
             Underlay.LOGGER.error("Failed to add contraption overlay at " + pos, e);
@@ -111,7 +111,7 @@ public class UnderlayManager {
                 worldOverlays.remove(pos);
 
                 if (!world.isClientSide() && world instanceof ServerLevel) {
-                    UnderlayPersistenceHandler.saveOverlays(world, worldOverlays);
+                    UnderlayPersistenceHandler.markDirty(world);
                 }
 
                 return true;
