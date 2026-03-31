@@ -3,8 +3,10 @@ package com.dooji.underlay;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -43,7 +45,7 @@ public class UnderlayRenderer {
 
     public static void init() {
         WorldRenderEvents.BEFORE_ENTITIES.register(UnderlayRenderer::renderOverlayBlockEntities);
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlayBlocks);
+        WorldRenderEvents.BEFORE_TRANSLUCENT.register(UnderlayRenderer::renderOverlayBlocks);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
@@ -101,7 +103,17 @@ public class UnderlayRenderer {
     }
 
     private static void renderOverlayBlocks(WorldRenderContext context) {
-        render(context, true, false);
+        Minecraft client = Minecraft.getInstance();
+        PoseStack matrices = getMatrices(context);
+        MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
+        LevelRenderState worldState = context.worldState();
+        Set<RenderType> usedRenderTypes = new HashSet<>();
+
+        render(matrices, bufferSource, worldState, false, null, usedRenderTypes);
+
+        for (RenderType usedRenderType : usedRenderTypes) {
+            bufferSource.endBatch(usedRenderType);
+        }
     }
 
     private static void renderOverlayBlockEntities(WorldRenderContext context) {
@@ -109,13 +121,17 @@ public class UnderlayRenderer {
     }
 
     private static void render(WorldRenderContext context, boolean requireContextMatrices, boolean renderBlockEntities) {
-        Minecraft client = Minecraft.getInstance();
         PoseStack matrices = requireContextMatrices ? context.matrices() : getMatrices(context);
         MultiBufferSource vertexConsumers = context.consumers();
         LevelRenderState worldState = context.worldState();
+        render(matrices, vertexConsumers, worldState, renderBlockEntities, context.commandQueue(), null);
+    }
+
+    private static void render(PoseStack matrices, MultiBufferSource vertexConsumers, LevelRenderState worldState, boolean renderBlockEntities, SubmitNodeCollector commandQueue, Set<RenderType> usedRenderTypes) {
+        Minecraft client = Minecraft.getInstance();
         Vec3 cameraPos = worldState != null ? worldState.cameraRenderState.pos : client.gameRenderer.getMainCamera().position();
 
-        if ((requireContextMatrices && matrices == null) || vertexConsumers == null || client.level == null || client.player == null) {
+        if (matrices == null || vertexConsumers == null || client.level == null || client.player == null) {
             return;
         }
 
@@ -128,7 +144,6 @@ public class UnderlayRenderer {
 
         ClientLevel world = client.level;
         checkForFullRefresh();
-        SubmitNodeCollector commandQueue = context.commandQueue();
         BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
         if (renderBlockEntities) {
             blockEntityRenderDispatcher.prepare(client.gameRenderer.getMainCamera());
@@ -173,6 +188,9 @@ public class UnderlayRenderer {
                     blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
                 } else {
                     blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
+                    if (usedRenderTypes != null) {
+                        usedRenderTypes.add(layer);
+                    }
                 }
             } else if (commandQueue != null && state.getBlock() instanceof EntityBlock entityBlock) {
                 BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
