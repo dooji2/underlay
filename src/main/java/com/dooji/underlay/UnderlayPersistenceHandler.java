@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -26,6 +27,8 @@ import net.minecraft.world.World;
 
 public class UnderlayPersistenceHandler {
     private static final int MAX_OVERLAY_SAVE_ATTEMPTS = 3;
+    private static final long SAVE_DEBOUNCE_TICKS = 20;
+    private static final Map<String, PendingSave> PENDING_SAVES = new ConcurrentHashMap<>();
 
     private static String getSaveFileName(World world) {
         String dimensionId = world.getRegistryKey().getValue().toString();
@@ -93,9 +96,50 @@ public class UnderlayPersistenceHandler {
         }
     }
 
+    public static void markDirty(World world) {
+        if (!(world instanceof ServerWorld serverWorld)) {
+            return;
+        }
+
+        PENDING_SAVES.put(getDimensionKey(serverWorld), new PendingSave(serverWorld, serverWorld.getTime() + SAVE_DEBOUNCE_TICKS));
+    }
+
+    public static void flushPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (pendingSave.world.getTime() < pendingSave.saveTick) {
+                continue;
+            }
+
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
+            }
+        }
+    }
+
+    public static void flushPendingSave(World world) {
+        if (!(world instanceof ServerWorld serverWorld)) {
+            return;
+        }
+
+        PendingSave pendingSave = PENDING_SAVES.remove(getDimensionKey(serverWorld));
+        if (pendingSave != null) {
+            saveOverlays(serverWorld, UnderlayManager.getOverlaysFor(serverWorld));
+        }
+    }
+
+    public static void flushAllPendingSaves() {
+        for (Map.Entry<String, PendingSave> entry : PENDING_SAVES.entrySet()) {
+            PendingSave pendingSave = entry.getValue();
+            if (PENDING_SAVES.remove(entry.getKey(), pendingSave)) {
+                saveOverlays(pendingSave.world, UnderlayManager.getOverlaysFor(pendingSave.world));
+            }
+        }
+    }
+
     public static Map<BlockPos, BlockState> loadOverlays(World world) {
         Map<BlockPos, BlockState> overlays = new HashMap<>();
-        
+
         if (world == null) {
             Underlay.LOGGER.warn("Attempted to load overlays with null world");
             return overlays;
@@ -108,11 +152,11 @@ public class UnderlayPersistenceHandler {
         try {
             ServerWorld serverWorld = (ServerWorld) world;
             RegistryEntryLookup<Block> lookup = serverWorld.getRegistryManager().getOrThrow(RegistryKeys.BLOCK);
-            
+
             Path saveDir = serverWorld.getServer().getSavePath(WorldSavePath.ROOT).resolve("data");
             String fileName = getSaveFileName(world);
             File saveFile = saveDir.resolve(fileName).toFile();
-            
+
             if (!saveFile.exists()) {
                 Underlay.LOGGER.info("No existing overlay save file found");
                 return overlays;
@@ -120,13 +164,13 @@ public class UnderlayPersistenceHandler {
 
             try (FileInputStream fis = new FileInputStream(saveFile)) {
                 NbtCompound rootTag = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
-                
+
                 if (rootTag.contains("overlays")) {
                     NbtList overlayList = rootTag.getList("overlays", 10);
 
                     for (int i = 0; i < overlayList.size(); i++) {
                         NbtCompound overlayTag = overlayList.getCompound(i);
-                        
+
                         int x = overlayTag.getInt("x");
                         int y = overlayTag.getInt("y");
                         int z = overlayTag.getInt("z");
@@ -159,5 +203,19 @@ public class UnderlayPersistenceHandler {
         }
 
         return overlays;
+    }
+
+    private static String getDimensionKey(ServerWorld world) {
+        return world.getRegistryKey().getValue().toString();
+    }
+
+    private static class PendingSave {
+        private final ServerWorld world;
+        private final long saveTick;
+
+        private PendingSave(ServerWorld world, long saveTick) {
+            this.world = world;
+            this.saveTick = saveTick;
+        }
     }
 }

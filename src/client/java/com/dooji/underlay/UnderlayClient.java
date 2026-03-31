@@ -39,9 +39,7 @@ public class UnderlayClient implements ClientModInitializer {
 					));
 
 				UnderlayManagerClient.sync(map);
-
-				UnderlayRenderer.clearAllOverlays();
-				UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
+				UnderlayRenderer.forceRefresh();
 			});
 		});
 
