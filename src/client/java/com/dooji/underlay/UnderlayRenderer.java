@@ -150,7 +150,11 @@ public class UnderlayRenderer {
 
                 int light = LevelRenderer.getLightColor(world, pos);
                 if (useEntityRendering) {
+                    RenderType layer = ItemBlockRenderTypes.getRenderType(state);
                     blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
+                    if (usedRenderTypes != null) {
+                        usedRenderTypes.add(layer);
+                    }
                 } else {
                     BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
                     parts.clear();
