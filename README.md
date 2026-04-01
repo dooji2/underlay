@@ -2,8 +2,6 @@
 
 Just **right click a block face with a block to place it**, (for example, under an upside-down stair), and you're done! Right click again with another item to replace it quickly, or left click it to remove it. Works in **Survival** too!
 
-> ### You can make any other block work as an overlay too, keep reading!
-
 ![Preview](https://i.postimg.cc/50nR26v0/ezgif-1478728b20dbf1.gif)
 
 By default, you can place the following blocks as overlays: carpets, trapdoors, buttons, rails, slabs and pressure plates. **To expand this to other blocks**, such as grass, see "For Developers - Through Datapacks" (for players).
