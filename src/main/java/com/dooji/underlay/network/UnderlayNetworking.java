@@ -10,7 +10,7 @@ import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.RequestOverlaySyncPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -28,18 +28,18 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class UnderlayNetworking {
 	public static void init() {
-		PayloadTypeRegistry.playS2C().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
-		PayloadTypeRegistry.playC2S().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
-		PayloadTypeRegistry.playC2S().register(PickItemFromOverlayPayload.ID, PickItemFromOverlayPayload.CODEC);
-		PayloadTypeRegistry.playC2S().register(RequestOverlaySyncPayload.ID, RequestOverlaySyncPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(PickItemFromOverlayPayload.ID, PickItemFromOverlayPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(RequestOverlaySyncPayload.ID, RequestOverlaySyncPayload.CODEC);
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			syncOverlaysToPlayer(handler.getPlayer());
 		});
 
-		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, from, to) -> {
+		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, from, to) -> {
 			syncOverlaysToPlayer(player);
 		});
 

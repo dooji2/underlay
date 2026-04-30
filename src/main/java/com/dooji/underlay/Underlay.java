@@ -3,7 +3,7 @@ package com.dooji.underlay;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -25,14 +25,14 @@ public class Underlay implements ModInitializer {
 	public void onInitialize() {
 		UnderlayNetworking.init();
 		
-		ServerWorldEvents.LOAD.register((server, world) -> {
+		ServerLevelEvents.LOAD.register((server, world) -> {
 			LOGGER.info("Loading overlays for world: " + world.dimension().identifier());
 			UnderlayManager.loadOverlays(world);
 			UnderlayConfig.load(world);
 		});
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> UnderlayPersistenceHandler.flushPendingSaves());
-		ServerWorldEvents.UNLOAD.register((server, world) -> UnderlayPersistenceHandler.flushPendingSave(world));
+		ServerLevelEvents.UNLOAD.register((server, world) -> UnderlayPersistenceHandler.flushPendingSave(world));
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> UnderlayPersistenceHandler.flushAllPendingSaves());
 
 		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {

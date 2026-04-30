@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
 
@@ -46,26 +46,25 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modCompileOnly "maven.modrinth:iris:${iris_version}"
-    modCompileOnly "maven.modrinth:sodium:${sodium_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	compileOnly "maven.modrinth:iris:${iris_version}"
+	compileOnly "maven.modrinth:sodium:${sodium_version}"
 	if (!project.hasProperty("noIrisRuntime")) {
-		modLocalRuntime "maven.modrinth:iris:${iris_version}"
+		localRuntime "maven.modrinth:iris:${iris_version}"
 	}
 	if (!project.hasProperty("noSodiumRuntime")) {
-		modLocalRuntime "maven.modrinth:sodium:${sodium_version}"
+		localRuntime "maven.modrinth:sodium:${sodium_version}"
 	}
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// jade
-	modCompileOnly "maven.modrinth:nvQzSEkH:${jade_version}"
-	modLocalRuntime "maven.modrinth:nvQzSEkH:${jade_version}"
+	compileOnly "maven.modrinth:nvQzSEkH:${jade_version}"
+	localRuntime "maven.modrinth:nvQzSEkH:${jade_version}"
 
 	// flashback
-	modCompileOnly "maven.modrinth:flashback:${flashback_version}"
+	compileOnly "maven.modrinth:flashback:${flashback_version}"
 	
 }
 
@@ -78,7 +77,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 java {
@@ -87,8 +86,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
@@ -99,7 +98,7 @@ jar {
 	}
 }
 
-tasks.named('remapJar') {
+tasks.named('jar') {
 	def minecraftVersion = project.minecraft_version
 	def modVersion = project.mod_version
 	def namespace = project.archives_base_name

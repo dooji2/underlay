@@ -61,7 +61,7 @@ public class MinecraftClientMixin {
         }
     }
 
-    @Inject(method = "pickBlock", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "pickBlockOrEntity", at = @At("HEAD"), cancellable = true)
     private void onItemPick(CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
         BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
