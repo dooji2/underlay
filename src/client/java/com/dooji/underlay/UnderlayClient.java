@@ -3,7 +3,7 @@ package com.dooji.underlay;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.dooji.underlay.flashback.FlashbackCompat;
+// import com.dooji.underlay.flashback.FlashbackCompat;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
@@ -13,7 +13,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.loader.api.FabricLoader;
+// import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -25,7 +25,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundSource;
 
 public class UnderlayClient implements ClientModInitializer {
-	private static final boolean IS_FLASHBACK_INSTALLED = FabricLoader.getInstance().isModLoaded("flashback");
+	// private static final boolean IS_FLASHBACK_INSTALLED = FabricLoader.getInstance().isModLoaded("flashback");
 
 	@Override
 	public void onInitializeClient() {
@@ -76,19 +76,19 @@ public class UnderlayClient implements ClientModInitializer {
 			UnderlayRenderer.clearAllOverlays();
 			UnderlayManagerClient.removeAll();
 
-			if (IS_FLASHBACK_INSTALLED) {
-				FlashbackCompat.onDisconnect();
-			}
+			// if (IS_FLASHBACK_INSTALLED) {
+			// 	FlashbackCompat.onDisconnect();
+			// }
 		});
 	}
 
 	private void onClientTick(Minecraft client) {
 		if (client.player == null || client.level == null) return;
-		if (IS_FLASHBACK_INSTALLED) {
-			FlashbackCompat.onClientTick(client);
-		}
+		// if (IS_FLASHBACK_INSTALLED) {
+		// 	FlashbackCompat.onClientTick(client);
+		// }
 
-		if (client.screen != null) return;
+		if (!client.mouseHandler.isMouseGrabbed()) return;
 
 		handleContinuousBreaking(client);
 	}

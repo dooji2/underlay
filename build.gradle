@@ -43,28 +43,42 @@ loom {
 
 }
 
+sourceSets {
+	client {
+		java {
+			exclude "com/dooji/underlay/flashback/**"
+			exclude "com/dooji/underlay/jade/**"
+			exclude "com/dooji/underlay/mixin/client/BlockAccessorImplMixin.java"
+			exclude "com/dooji/underlay/mixin/client/JadeRayTracingMixin.java"
+		}
+		resources {
+			exclude "underlay.client.jade.mixins.json"
+		}
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	compileOnly "maven.modrinth:iris:${iris_version}"
-	compileOnly "maven.modrinth:sodium:${sodium_version}"
-	if (!project.hasProperty("noIrisRuntime")) {
-		localRuntime "maven.modrinth:iris:${iris_version}"
-	}
-	if (!project.hasProperty("noSodiumRuntime")) {
-		localRuntime "maven.modrinth:sodium:${sodium_version}"
-	}
+	// compileOnly "maven.modrinth:iris:${iris_version}"
+	// compileOnly "maven.modrinth:sodium:${sodium_version}"
+	// if (!project.hasProperty("noIrisRuntime")) {
+	// 	localRuntime "maven.modrinth:iris:${iris_version}"
+	// }
+	// if (!project.hasProperty("noSodiumRuntime")) {
+	// 	localRuntime "maven.modrinth:sodium:${sodium_version}"
+	// }
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// jade
-	compileOnly "maven.modrinth:nvQzSEkH:${jade_version}"
-	localRuntime "maven.modrinth:nvQzSEkH:${jade_version}"
+	// compileOnly "maven.modrinth:nvQzSEkH:${jade_version}"
+	// localRuntime "maven.modrinth:nvQzSEkH:${jade_version}"
 
 	// flashback
-	compileOnly "maven.modrinth:flashback:${flashback_version}"
+	// compileOnly "maven.modrinth:flashback:${flashback_version}"
 	
 }
 

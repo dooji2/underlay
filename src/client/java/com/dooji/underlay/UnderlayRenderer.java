@@ -125,7 +125,8 @@ public class UnderlayRenderer {
             BlockEntityRenderState blockEntityRenderState = blockEntityRenderDispatcher.tryExtractRenderState(
                 blockEntity,
                 client.getDeltaTracker().getGameTimeDeltaTicks(),
-                null
+                null,
+                false
             );
             if (blockEntityRenderState == null) {
                 continue;
