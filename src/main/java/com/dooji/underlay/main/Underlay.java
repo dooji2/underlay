@@ -15,7 +15,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.event.world.WorldEvent;
 
-@Mod(modid = Underlay.MOD_ID, name = "Underlay", version = "1.0.0")
+@Mod(modid = Underlay.MOD_ID, name = "Underlay", version = "1.0.2")
 @Mod.EventBusSubscriber(modid = Underlay.MOD_ID)
 public class Underlay {
     public static final String MOD_ID = "underlay";
