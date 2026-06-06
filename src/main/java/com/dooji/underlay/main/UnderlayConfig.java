@@ -18,33 +18,37 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public class UnderlayConfig {
     public static final String OVERLAY_BLOCKS_KEY = "overlay_blocks";
     public static final String EXCLUDE_BLOCKS_KEY = "exclude_blocks";
+    public static final String TARGET_EXCLUDE_BLOCKS_KEY = "target_exclude_blocks";
     private static final String CONFIG_FILE_NAME = "underlay.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final List<String> overlayBlocks = new ArrayList<>();
     private final List<String> excludeBlocks = new ArrayList<>();
+    private final List<String> targetExcludeBlocks = new ArrayList<>();
 
     public static void load(ServerLevel world) {
         if (world == null || world.isClientSide()) {
             return;
         }
 
-        UnderlayApi.clearLoadedBlocks();
+        UnderlayRegistry.clearLoadedBlocks();
 
         UnderlayConfig config = readConfig();
         loadDatapackBlocks(world);
         loadDatapackExcludes(world);
         registerOverlayBlocks(config);
         registerExcludedBlocks(config);
+        registerTargetExcludedBlocks(config);
     }
 
     public List<String> getOverlayBlocks() {
@@ -71,10 +75,23 @@ public class UnderlayConfig {
         excludeBlocks.add(blockId);
     }
 
+    public List<String> getTargetExcludeBlocks() {
+        return targetExcludeBlocks;
+    }
+
+    public void addTargetExcludeBlock(String blockId) {
+        if (blockId == null || blockId.trim().isEmpty()) {
+            return;
+        }
+
+        targetExcludeBlocks.add(blockId);
+    }
+
     public JsonObject toJson() {
         JsonObject root = new JsonObject();
         JsonArray blocks = new JsonArray();
         JsonArray excludes = new JsonArray();
+        JsonArray targetExcludes = new JsonArray();
 
         for (String blockId : overlayBlocks) {
             blocks.add(blockId);
@@ -86,6 +103,11 @@ public class UnderlayConfig {
         }
 
         root.add(EXCLUDE_BLOCKS_KEY, excludes);
+        for (String blockId : targetExcludeBlocks) {
+            targetExcludes.add(blockId);
+        }
+
+        root.add(TARGET_EXCLUDE_BLOCKS_KEY, targetExcludes);
         return root;
     }
 
@@ -115,6 +137,17 @@ public class UnderlayConfig {
                 }
 
                 config.addExcludeBlock(entry.getAsString());
+            }
+        }
+
+        if (root.has(TARGET_EXCLUDE_BLOCKS_KEY) && root.get(TARGET_EXCLUDE_BLOCKS_KEY).isJsonArray()) {
+            JsonArray targetExcludes = root.getAsJsonArray(TARGET_EXCLUDE_BLOCKS_KEY);
+            for (JsonElement entry : targetExcludes) {
+                if (!entry.isJsonPrimitive()) {
+                    continue;
+                }
+
+                config.addTargetExcludeBlock(entry.getAsString());
             }
         }
 
@@ -160,22 +193,22 @@ public class UnderlayConfig {
     }
 
     private static void loadDatapackBlocks(ServerLevel world) {
-        Registry<Block> blocks = world.registryAccess().registryOrThrow(BuiltInRegistries.BLOCK.key());
+        Registry<Block> blocks = world.registryAccess().registryOrThrow(Registries.BLOCK);
 
         blocks.getTag(Underlay.OVERLAY_TAG).ifPresent(tag -> tag.forEach(entry -> {
             Block block = entry.value();
             if (!blocks.getOrCreateTag(Underlay.EXCLUDE_TAG).contains(entry)) {
-                UnderlayApi.registerDatapackOverlayBlock(block);
+                UnderlayRegistry.registerDatapackOverlayBlock(block);
             }
         }));
     }
 
     private static void loadDatapackExcludes(ServerLevel world) {
-        Registry<Block> blocks = world.registryAccess().registryOrThrow(BuiltInRegistries.BLOCK.key());
+        Registry<Block> blocks = world.registryAccess().registryOrThrow(Registries.BLOCK);
 
         blocks.getTag(Underlay.EXCLUDE_TAG).ifPresent(tag -> tag.forEach(entry -> {
             Block block = entry.value();
-            UnderlayApi.registerDatapackExcludedBlock(block);
+            UnderlayRegistry.registerDatapackExcludedBlock(block);
         }));
     }
 
@@ -190,13 +223,13 @@ public class UnderlayConfig {
                 continue;
             }
 
-            Block block = BuiltInRegistries.BLOCK.get(blockId);
-            if (!BuiltInRegistries.BLOCK.getKey(block).equals(blockId)) {
+            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
+            if (block == null) {
                 Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
                 continue;
             }
 
-            UnderlayApi.registerOverlayBlock(block);
+            UnderlayRegistry.registerOverlayBlock(block);
         }
     }
 
@@ -211,13 +244,34 @@ public class UnderlayConfig {
                 continue;
             }
 
-            Block block = BuiltInRegistries.BLOCK.get(blockId);
-            if (!BuiltInRegistries.BLOCK.getKey(block).equals(blockId)) {
+            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
+            if (block == null) {
                 Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
                 continue;
             }
 
-            UnderlayApi.registerExcludedBlock(block);
+            UnderlayRegistry.registerExcludedBlock(block);
+        }
+    }
+
+    private static void registerTargetExcludedBlocks(UnderlayConfig config) {
+        for (String blockIdString : config.getTargetExcludeBlocks()) {
+            ResourceLocation blockId;
+
+            try {
+                blockId = new ResourceLocation(blockIdString);
+            } catch (Exception e) {
+                Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
+                continue;
+            }
+
+            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
+            if (block == null) {
+                Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
+                continue;
+            }
+
+            UnderlayRegistry.registerTargetExcludedBlock(block);
         }
     }
 

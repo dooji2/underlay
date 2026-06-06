@@ -3,6 +3,7 @@ package com.dooji.underlay.main;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.CarpetBlock;
@@ -11,11 +12,15 @@ import net.minecraft.world.level.block.RailBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.TrapDoorBlock;
 
-public class UnderlayApi {
-    static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
-    static final Set<Block> CUSTOM_BLOCKS_DP = ConcurrentHashMap.newKeySet();
-    static final Set<Block> CUSTOM_BLOCKS_EXCLUDE = ConcurrentHashMap.newKeySet();
-    static final Set<Block> CUSTOM_BLOCKS_EXCLUDE_DP = ConcurrentHashMap.newKeySet();
+public final class UnderlayRegistry {
+    private static final Set<Block> CUSTOM_BLOCKS = ConcurrentHashMap.newKeySet();
+    private static final Set<Block> CUSTOM_BLOCKS_DP = ConcurrentHashMap.newKeySet();
+    private static final Set<Block> CUSTOM_BLOCKS_EXCLUDE = ConcurrentHashMap.newKeySet();
+    private static final Set<Block> CUSTOM_BLOCKS_EXCLUDE_DP = ConcurrentHashMap.newKeySet();
+    private static final Set<Block> CUSTOM_TARGET_BLOCKS_EXCLUDE = ConcurrentHashMap.newKeySet();
+
+    private UnderlayRegistry() {
+    }
 
     static void registerOverlayBlock(Block block) {
         if (block == null) {
@@ -38,6 +43,7 @@ public class UnderlayApi {
         CUSTOM_BLOCKS_DP.clear();
         CUSTOM_BLOCKS_EXCLUDE.clear();
         CUSTOM_BLOCKS_EXCLUDE_DP.clear();
+        CUSTOM_TARGET_BLOCKS_EXCLUDE.clear();
     }
 
     static void registerExcludedBlock(Block block) {
@@ -54,6 +60,22 @@ public class UnderlayApi {
         }
 
         CUSTOM_BLOCKS_EXCLUDE_DP.add(block);
+    }
+
+    static void registerTargetExcludedBlock(Block block) {
+        if (block == null) {
+            return;
+        }
+
+        CUSTOM_TARGET_BLOCKS_EXCLUDE.add(block);
+    }
+
+    public static boolean canPlaceOverlayOn(ServerLevel world, Block block) {
+        if (block == null) {
+            return false;
+        }
+
+        return !CUSTOM_TARGET_BLOCKS_EXCLUDE.contains(block);
     }
 
     public static boolean isOverlayBlock(Block block) {

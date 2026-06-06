@@ -27,7 +27,7 @@ public class UnderlayManager {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(sourceBlock)) {
+        if (!UnderlayRegistry.isOverlayBlock(sourceBlock)) {
             return;
         }
 
@@ -58,7 +58,7 @@ public class UnderlayManager {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+        if (!UnderlayRegistry.isOverlayBlock(blockState.getBlock())) {
             return;
         }
 
@@ -79,7 +79,7 @@ public class UnderlayManager {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(blockState.getBlock())) {
+        if (!UnderlayRegistry.isOverlayBlock(blockState.getBlock())) {
             return;
         }
 
