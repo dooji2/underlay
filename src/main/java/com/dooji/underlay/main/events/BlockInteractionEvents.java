@@ -1,8 +1,8 @@
 package com.dooji.underlay.main.events;
 
 import com.dooji.underlay.mixin.StandingAndWallBlockItemAccessor;
-import com.dooji.underlay.main.UnderlayApi;
 import com.dooji.underlay.main.UnderlayManager;
+import com.dooji.underlay.main.UnderlayRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -74,7 +74,11 @@ public class BlockInteractionEvents {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(block)) {
+        if (!UnderlayRegistry.isOverlayBlock(block)) {
+            return;
+        }
+
+        if (!UnderlayRegistry.canPlaceOverlayOn(world, existingState.getBlock())) {
             return;
         }
 
