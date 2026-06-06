@@ -25,18 +25,21 @@ import net.minecraftforge.fml.common.registry.GameRegistry;
 public class UnderlayConfig {
     public static final String OVERLAY_BLOCKS_KEY = "overlay_blocks";
     public static final String EXCLUDE_BLOCKS_KEY = "exclude_blocks";
+    public static final String TARGET_EXCLUDE_BLOCKS_KEY = "target_exclude_blocks";
     private static final String CONFIG_FILE_NAME = "underlay.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final List<String> overlayBlocks = new ArrayList<>();
     private final List<String> excludeBlocks = new ArrayList<>();
+    private final List<String> targetExcludeBlocks = new ArrayList<>();
 
     public static void load() {
-        UnderlayApi.clearLoadedBlocks();
+        UnderlayRegistry.clearLoadedBlocks();
 
         UnderlayConfig config = readConfig();
         registerExcludedBlocks(config);
         registerOverlayBlocks(config);
+        registerTargetExcludedBlocks(config);
     }
 
     public List<String> getOverlayBlocks() {
@@ -63,10 +66,23 @@ public class UnderlayConfig {
         excludeBlocks.add(blockId);
     }
 
+    public List<String> getTargetExcludeBlocks() {
+        return targetExcludeBlocks;
+    }
+
+    public void addTargetExcludeBlock(String blockId) {
+        if (blockId == null || blockId.trim().isEmpty()) {
+            return;
+        }
+
+        targetExcludeBlocks.add(blockId);
+    }
+
     public JsonObject toJson() {
         JsonObject root = new JsonObject();
         JsonArray blocks = new JsonArray();
         JsonArray excludes = new JsonArray();
+        JsonArray targetExcludes = new JsonArray();
 
         for (String blockId : overlayBlocks) {
             blocks.add(blockId);
@@ -78,6 +94,11 @@ public class UnderlayConfig {
         }
 
         root.add(EXCLUDE_BLOCKS_KEY, excludes);
+        for (String blockId : targetExcludeBlocks) {
+            targetExcludes.add(blockId);
+        }
+
+        root.add(TARGET_EXCLUDE_BLOCKS_KEY, targetExcludes);
         return root;
     }
 
@@ -107,6 +128,17 @@ public class UnderlayConfig {
                 }
 
                 config.addExcludeBlock(entry.getAsString());
+            }
+        }
+
+        if (root.has(TARGET_EXCLUDE_BLOCKS_KEY) && root.get(TARGET_EXCLUDE_BLOCKS_KEY).isJsonArray()) {
+            JsonArray targetExcludes = root.getAsJsonArray(TARGET_EXCLUDE_BLOCKS_KEY);
+            for (JsonElement entry : targetExcludes) {
+                if (!entry.isJsonPrimitive()) {
+                    continue;
+                }
+
+                config.addTargetExcludeBlock(entry.getAsString());
             }
         }
 
@@ -164,7 +196,7 @@ public class UnderlayConfig {
 
             Block block = GameRegistry.findRegistry(Block.class).getValue(blockId);
             if (block != null) {
-                UnderlayApi.registerOverlayBlock(block);
+                UnderlayRegistry.registerOverlayBlock(block);
             } else {
                 Underlay.LOGGER.warn("Unknown overlay block in config: " + blockIdString);
             }
@@ -184,9 +216,29 @@ public class UnderlayConfig {
 
             Block block = GameRegistry.findRegistry(Block.class).getValue(blockId);
             if (block != null) {
-                UnderlayApi.registerExcludedBlock(block);
+                UnderlayRegistry.registerExcludedBlock(block);
             } else {
                 Underlay.LOGGER.warn("Unknown excluded block in config: " + blockIdString);
+            }
+        }
+    }
+
+    private static void registerTargetExcludedBlocks(UnderlayConfig config) {
+        for (String blockIdString : config.getTargetExcludeBlocks()) {
+            ResourceLocation blockId;
+
+            try {
+                blockId = new ResourceLocation(blockIdString);
+            } catch (Exception e) {
+                Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
+                continue;
+            }
+
+            Block block = GameRegistry.findRegistry(Block.class).getValue(blockId);
+            if (block != null) {
+                UnderlayRegistry.registerTargetExcludedBlock(block);
+            } else {
+                Underlay.LOGGER.warn("Unknown target block in config: " + blockIdString);
             }
         }
     }

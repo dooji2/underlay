@@ -1,8 +1,8 @@
 package com.dooji.underlay.main.events;
 
 import com.dooji.underlay.main.Underlay;
-import com.dooji.underlay.main.UnderlayApi;
 import com.dooji.underlay.main.UnderlayManager;
+import com.dooji.underlay.main.UnderlayRegistry;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.SoundType;
@@ -142,7 +142,11 @@ public class BlockInteractionEvents {
             return EnumActionResult.PASS;
         }
 
-        if (!UnderlayApi.isOverlayBlock(block)) {
+        if (!UnderlayRegistry.isOverlayBlock(block)) {
+            return EnumActionResult.PASS;
+        }
+
+        if (!UnderlayRegistry.canPlaceOverlayOn(world, existingState.getBlock())) {
             return EnumActionResult.PASS;
         }
 
