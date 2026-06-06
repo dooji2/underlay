@@ -30,6 +30,34 @@ public abstract class BlockItemMixin {
 	@Shadow
 	public abstract ItemPlacementContext getPlacementContext(ItemPlacementContext context);
 
+	@Inject(method = "place", at = @At("HEAD"), cancellable = true)
+	private void preventDupePlacement(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
+		BlockItem self = (BlockItem)(Object)this;
+		Block block = self.getBlock();
+		ItemPlacementContext placementContext = this.getPlacementContext(context);
+		if (placementContext == null) {
+			return;
+		}
+
+		World world = placementContext.getWorld();
+		if (world.isClient()) {
+			return;
+		}
+
+		BlockPos pos = placementContext.getBlockPos();
+		if (!UnderlayManager.hasOverlay(world, pos)) {
+			return;
+		}
+
+		BlockState overlay = UnderlayManager.getOverlay(world, pos);
+		BlockState newState = resolveOverlayState(self, block, placementContext, context.getSide());
+
+		if (newState != null && overlay.getBlock() == newState.getBlock()) {
+			cir.setReturnValue(ActionResult.FAIL);
+			cir.cancel();
+		}
+	}
+
 	@Inject(method = "place", at = @At("RETURN"), cancellable = true)
 	private void handleOverlayPlacement(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
 		ActionResult result = cir.getReturnValue();
