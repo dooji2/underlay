@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.PacketByteBuf;
 
+import com.dooji.underlay.jade.JadeComponents;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
@@ -15,6 +16,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -29,6 +31,10 @@ import net.minecraft.util.math.BlockPos;
 public class UnderlayClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		if (FabricLoader.getInstance().isModLoaded("jade")) {
+			JadeComponents.init();
+		}
+
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 
 		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (client, handler, buf, responseSender) -> {
