@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.dooji.underlay.flashback.FlashbackCompat;
+import com.dooji.underlay.jade.JadeComponents;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
@@ -29,6 +30,10 @@ public class UnderlayClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		if (FabricLoader.getInstance().isModLoaded("jade")) {
+			JadeComponents.init();
+		}
+
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 
 		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (payload, context) -> {
