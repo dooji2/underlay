@@ -61,6 +61,15 @@ public class BlockInteractionEvents {
         BlockState newState = resolveOverlayState(blockItem, block, placementContext, face);
         BlockState existingState = world.getBlockState(targetPos);
 
+        if (UnderlayManager.hasOverlay(world, targetPos)) {
+            BlockState overlay = UnderlayManager.getOverlay(world, targetPos);
+            if (newState != null && overlay.getBlock() == newState.getBlock()) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+                return;
+            }
+        }
+
         if (newState != null && existingState.getBlock() == block && newState.getBlock() == block) {
             return;
         }
