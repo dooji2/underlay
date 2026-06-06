@@ -22,7 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
-import com.dooji.underlay.UnderlayApi;
+import com.dooji.underlay.UnderlayRegistry;
 
 @Mixin(BlockItem.class)
 public abstract class BlockItemMixin {
@@ -80,7 +80,11 @@ public abstract class BlockItemMixin {
 			return;
 		}
 
-		if (!world.isClientSide() && !UnderlayApi.isOverlayBlock((ServerLevel)world, block)) {
+		if (!world.isClientSide() && !UnderlayRegistry.isOverlayBlock((ServerLevel)world, block)) {
+			return;
+		}
+
+		if (!world.isClientSide() && !UnderlayRegistry.canPlaceOverlayOn((ServerLevel)world, existing.getBlock())) {
 			return;
 		}
 

@@ -25,7 +25,7 @@ public class UnderlayManager {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(world, sourceBlock)) {
+        if (!UnderlayRegistry.isOverlayBlock(world, sourceBlock)) {
             return;
         }
 
@@ -56,7 +56,7 @@ public class UnderlayManager {
             return;
         }
 
-        if (!UnderlayApi.isOverlayBlock(world, blockState.getBlock())) {
+        if (!UnderlayRegistry.isOverlayBlock(world, blockState.getBlock())) {
             return;
         }
 
