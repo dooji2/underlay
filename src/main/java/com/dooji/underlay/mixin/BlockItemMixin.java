@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.dooji.underlay.UnderlayManager;
-import com.dooji.underlay.UnderlayApi;
+import com.dooji.underlay.UnderlayRegistry;
 
 @Mixin(BlockItem.class)
 public abstract class BlockItemMixin {
@@ -81,7 +81,11 @@ public abstract class BlockItemMixin {
 			return;
 		}
 
-		if (!world.isClient() && !UnderlayApi.isOverlayBlock((ServerWorld)world, block)) {
+		if (!world.isClient() && !UnderlayRegistry.isOverlayBlock((ServerWorld)world, block)) {
+			return;
+		}
+
+		if (!world.isClient() && !UnderlayRegistry.canPlaceOverlayOn((ServerWorld)world, existing.getBlock())) {
 			return;
 		}
 
