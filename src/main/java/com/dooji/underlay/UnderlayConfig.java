@@ -29,24 +29,27 @@ import net.fabricmc.loader.api.FabricLoader;
 public class UnderlayConfig {
 	public static final String OVERLAY_BLOCKS_KEY = "overlay_blocks";
 	public static final String EXCLUDE_BLOCKS_KEY = "exclude_blocks";
+	public static final String TARGET_EXCLUDE_BLOCKS_KEY = "target_exclude_blocks";
 	private static final String CONFIG_FILE_NAME = "underlay.json";
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	private final List<String> overlayBlocks = new ArrayList<>();
 	private final List<String> excludeBlocks = new ArrayList<>();
+	private final List<String> targetExcludeBlocks = new ArrayList<>();
 
 	public static void load(ServerWorld world) {
 		if (world == null || world.isClient()) {
 			return;
 		}
 
-		UnderlayApi.clearLoadedBlocks();
+		UnderlayRegistry.clearLoadedBlocks();
 
 		UnderlayConfig config = readConfig();
 		loadDatapackOverlayBlocks(world);
 		loadDatapackExcludedBlocks(world);
 		registerOverlayBlocks(config);
 		registerExcludedBlocks(config);
+		registerTargetExcludedBlocks(config);
 	}
 
 	public List<String> getOverlayBlocks() {
@@ -73,10 +76,23 @@ public class UnderlayConfig {
 		excludeBlocks.add(blockId);
 	}
 
+	public List<String> getTargetExcludeBlocks() {
+		return targetExcludeBlocks;
+	}
+
+	public void addTargetExcludeBlock(String blockId) {
+		if (blockId == null || blockId.isBlank()) {
+			return;
+		}
+
+		targetExcludeBlocks.add(blockId);
+	}
+
 	public JsonObject toJson() {
 		JsonObject root = new JsonObject();
 		JsonArray blocks = new JsonArray();
 		JsonArray excludeBlocks = new JsonArray();
+		JsonArray targetExcludeBlocks = new JsonArray();
 
 		for (String blockId : overlayBlocks) {
 			blocks.add(blockId);
@@ -88,6 +104,11 @@ public class UnderlayConfig {
 		}
 
 		root.add(EXCLUDE_BLOCKS_KEY, excludeBlocks);
+		for (String blockId : this.targetExcludeBlocks) {
+			targetExcludeBlocks.add(blockId);
+		}
+
+		root.add(TARGET_EXCLUDE_BLOCKS_KEY, targetExcludeBlocks);
 		return root;
 	}
 
@@ -117,6 +138,17 @@ public class UnderlayConfig {
 				}
 
 				config.addExcludeBlock(entry.getAsString());
+			}
+		}
+
+		if (root.has(TARGET_EXCLUDE_BLOCKS_KEY) && root.get(TARGET_EXCLUDE_BLOCKS_KEY).isJsonArray()) {
+			JsonArray targetExcludeBlocks = root.getAsJsonArray(TARGET_EXCLUDE_BLOCKS_KEY);
+			for (JsonElement entry : targetExcludeBlocks) {
+				if (!entry.isJsonPrimitive()) {
+					continue;
+				}
+
+				config.addTargetExcludeBlock(entry.getAsString());
 			}
 		}
 
@@ -168,7 +200,7 @@ public class UnderlayConfig {
 			list.stream()
 				.filter(entry -> !entry.isIn(Underlay.EXCLUDE_TAG))
 				.map(RegistryEntry::value)
-				.forEach(UnderlayApi::registerDatapackOverlayBlock);
+				.forEach(UnderlayRegistry::registerDatapackOverlayBlock);
 		});
 	}
 
@@ -178,7 +210,7 @@ public class UnderlayConfig {
 		blocks.getOptional(Underlay.EXCLUDE_TAG).ifPresent(list -> {
 			list.stream()
 				.map(RegistryEntry::value)
-				.forEach(UnderlayApi::registerDatapackExcludedBlock);
+				.forEach(UnderlayRegistry::registerDatapackExcludedBlock);
 		});
 	}
 
@@ -197,7 +229,7 @@ public class UnderlayConfig {
 				continue;
 			}
 
-			UnderlayApi.registerOverlayBlock(block);
+			UnderlayRegistry.registerOverlayBlock(block);
 		}
 	}
 
@@ -216,7 +248,26 @@ public class UnderlayConfig {
 				continue;
 			}
 
-			UnderlayApi.registerExcludedBlock(block);
+			UnderlayRegistry.registerExcludedBlock(block);
+		}
+	}
+
+	private static void registerTargetExcludedBlocks(UnderlayConfig config) {
+		for (String blockIdString : config.getTargetExcludeBlocks()) {
+			Identifier blockId = Identifier.tryParse(blockIdString);
+
+			if (blockId == null) {
+				Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
+				continue;
+			}
+
+			Block block = Registries.BLOCK.get(blockId);
+			if (!Registries.BLOCK.getId(block).equals(blockId)) {
+				Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
+				continue;
+			}
+
+			UnderlayRegistry.registerTargetExcludedBlock(block);
 		}
 	}
 
