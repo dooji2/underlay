@@ -63,11 +63,12 @@ public class BlockInteractionEvents {
         float hitY = hitVec != null ? (float) (hitVec.y - basePos.getY()) : 0.5F;
         float hitZ = hitVec != null ? (float) (hitVec.z - basePos.getZ()) : 0.5F;
 
-        if (!placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ)) {
+        EnumActionResult result = placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ);
+        if (result == EnumActionResult.PASS) {
             return;
         }
 
-        event.setCancellationResult(EnumActionResult.SUCCESS);
+        event.setCancellationResult(result);
         event.setCanceled(true);
         event.setUseBlock(Event.Result.DENY);
         event.setUseItem(Event.Result.DENY);
@@ -110,52 +111,60 @@ public class BlockInteractionEvents {
         float hitY = (float) (hit.hitVec.y - basePos.getY());
         float hitZ = (float) (hit.hitVec.z - basePos.getZ());
 
-        if (!placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ)) {
+        EnumActionResult result = placeOverlay(world, player, stack, item, targetPos, face, hitX, hitY, hitZ);
+        if (result == EnumActionResult.PASS) {
             return;
         }
 
-        event.setCancellationResult(EnumActionResult.SUCCESS);
+        event.setCancellationResult(result);
         event.setCanceled(true);
     }
 
-    private static boolean placeOverlay(WorldServer world, EntityPlayerMP player, ItemStack stack, Item item, BlockPos targetPos, EnumFacing face, float hitX, float hitY, float hitZ) {
+    private static EnumActionResult placeOverlay(WorldServer world, EntityPlayerMP player, ItemStack stack, Item item, BlockPos targetPos, EnumFacing face, float hitX, float hitY, float hitZ) {
         ItemBlock itemBlock = (ItemBlock)item;
         Block block = itemBlock.getBlock();
 
         IBlockState newState = block.getStateForPlacement(world, targetPos, face, hitX, hitY, hitZ, stack.getMetadata(), player, EnumHand.MAIN_HAND);
         if (newState == null) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         IBlockState existingState = world.getBlockState(targetPos);
 
+        if (UnderlayManager.hasOverlay(world, targetPos)) {
+            IBlockState overlay = UnderlayManager.getOverlay(world, targetPos);
+            if (overlay.getBlock() == newState.getBlock()) {
+                return EnumActionResult.FAIL;
+            }
+        }
+
         if (existingState.getBlock() == block && newState.getBlock() == block) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         if (!UnderlayApi.isOverlayBlock(block)) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         if (existingState.getBlock().isReplaceable(world, targetPos)) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         if (existingState.getBlock().isAir(existingState, world, targetPos)) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         if (existingState.isFullCube()) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         // prevent overlay placement if there's fluid in the block for now
         if (existingState.getMaterial().isLiquid()) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         if (!world.isBlockModifiable(player, targetPos)) {
-            return false;
+            return EnumActionResult.PASS;
         }
 
         UnderlayManager.addOverlay(player, world, targetPos, newState, block);
@@ -169,7 +178,7 @@ public class BlockInteractionEvents {
         player.swingArm(EnumHand.MAIN_HAND);
         world.getEntityTracker().sendToTrackingAndSelf(player, new SPacketAnimation(player, 0));
 
-        return true;
+        return EnumActionResult.SUCCESS;
     }
 
     private static RayTraceResult rayTraceFromPlayer(EntityPlayer player, double reach, float partialTicks) {
