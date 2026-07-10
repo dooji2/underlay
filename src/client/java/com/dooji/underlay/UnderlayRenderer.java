@@ -3,6 +3,7 @@ package com.dooji.underlay;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
@@ -25,6 +26,7 @@ public class UnderlayRenderer {
     private static final Random RANDOM = Random.create();
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> BLOCK_ENTITY_OVERLAYS = ConcurrentHashMap.newKeySet();
 
     private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
 
@@ -34,18 +36,28 @@ public class UnderlayRenderer {
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
-        RENDER_CACHE.put(pos.toImmutable(), state);
-        BLOCK_ENTITY_CACHE.remove(pos);
+        BlockPos immutablePos = pos.toImmutable();
+        RENDER_CACHE.put(immutablePos, state);
+
+        if (state.getBlock() instanceof BlockEntityProvider) {
+            BLOCK_ENTITY_OVERLAYS.add(immutablePos);
+        } else {
+            BLOCK_ENTITY_OVERLAYS.remove(immutablePos);
+        }
+
+        BLOCK_ENTITY_CACHE.remove(immutablePos);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
         RENDER_CACHE.remove(pos);
         BLOCK_ENTITY_CACHE.remove(pos);
+        BLOCK_ENTITY_OVERLAYS.remove(pos);
     }
 
     public static void clearAllOverlays() {
         RENDER_CACHE.clear();
         BLOCK_ENTITY_CACHE.clear();
+        BLOCK_ENTITY_OVERLAYS.clear();
     }
 
     public static void forceRefresh() {
@@ -73,19 +85,27 @@ public class UnderlayRenderer {
     }
 
     private static void renderOverlayBlocks(WorldRenderContext context) {
-        render(context, true, false);
+        if (RENDER_CACHE.isEmpty()) {
+            return;
+        }
+
+        renderBlocks(context);
     }
 
     private static void renderOverlayBlockEntities(WorldRenderContext context) {
-        render(context, false, true);
+        if (BLOCK_ENTITY_OVERLAYS.isEmpty()) {
+            return;
+        }
+
+        renderBlockEntities(context);
     }
 
-    private static void render(WorldRenderContext context, boolean requireContextMatrices, boolean renderBlockEntities) {
+    private static void renderBlocks(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
-        MatrixStack matrices = requireContextMatrices ? context.matrixStack() : getMatrices(context);
+        MatrixStack matrices = context.matrixStack();
         VertexConsumerProvider vertexConsumers = context.consumers();
         Vec3d cameraPos = context.camera().getPos();
-        if ((requireContextMatrices && matrices == null) || vertexConsumers == null || context.world() == null || client.player == null) {
+        if (matrices == null || vertexConsumers == null || context.world() == null || client.player == null) {
             return;
         }
 
@@ -114,23 +134,16 @@ public class UnderlayRenderer {
             matrices.push();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
-            if (!renderBlockEntities) {
-                matrices.translate(0.5, 0.5, 0.5);
-                matrices.scale(1.0001f, 1.0001f, 1.0001f);
-                matrices.translate(-0.5, -0.5, -0.5);
+            matrices.translate(0.5, 0.5, 0.5);
+            matrices.scale(1.0001f, 1.0001f, 1.0001f);
+            matrices.translate(-0.5, -0.5, -0.5);
 
-                VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-                int light = WorldRenderer.getLightmapCoordinates(context.world(), pos);
-                if (useEntityRendering) {
-                    blockRenderer.renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
-                } else {
-                    blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
-                }
-            } else if (state.getBlock() instanceof BlockEntityProvider provider) {
-                BlockEntity blockEntity = getOrCreateBlockEntity(context.world(), pos, state, provider);
-                if (blockEntity != null) {
-                    client.getBlockEntityRenderDispatcher().render(blockEntity, client.getTickDelta(), matrices, vertexConsumers);
-                }
+            VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
+            int light = WorldRenderer.getLightmapCoordinates(context.world(), pos);
+            if (useEntityRendering) {
+                blockRenderer.renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
+            } else {
+                blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
             }
 
             matrices.pop();
@@ -141,6 +154,51 @@ public class UnderlayRenderer {
         for (BlockPos stalePos : stalePositions) {
             unregisterOverlay(stalePos);
         }
+    }
+
+    private static void renderBlockEntities(WorldRenderContext context) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        MatrixStack matrices = getMatrices(context);
+        VertexConsumerProvider vertexConsumers = context.consumers();
+        Vec3d cameraPos = context.camera().getPos();
+        if (vertexConsumers == null || context.world() == null || client.player == null) {
+            return;
+        }
+
+        int chunks = client.options.getViewDistance().getValue();
+        int blocks = chunks * 16;
+        double maxDistSq = (double)blocks * blocks;
+
+        matrices.push();
+        for (BlockPos pos : BLOCK_ENTITY_OVERLAYS) {
+            BlockState state = RENDER_CACHE.get(pos);
+            if (state == null) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                continue;
+            }
+
+            double distanceSq = pos.getSquaredDistance(client.player.getBlockPos());
+            if (distanceSq > maxDistSq) {
+                continue;
+            }
+
+            if (!(state.getBlock() instanceof BlockEntityProvider provider)) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                continue;
+            }
+
+            BlockEntity blockEntity = getOrCreateBlockEntity(context.world(), pos, state, provider);
+            if (blockEntity == null) {
+                continue;
+            }
+
+            matrices.push();
+            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+            client.getBlockEntityRenderDispatcher().render(blockEntity, client.getTickDelta(), matrices, vertexConsumers);
+            matrices.pop();
+        }
+
+        matrices.pop();
     }
 
     private static BlockEntity getOrCreateBlockEntity(ClientWorld world, BlockPos pos, BlockState state, BlockEntityProvider provider) {
