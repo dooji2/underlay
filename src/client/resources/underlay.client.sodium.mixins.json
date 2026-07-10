@@ -1,11 +1,9 @@
 {
-	"required": true,
+	"required": false,
 	"package": "com.dooji.underlay.mixin.client",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ClientPlayerInteractionManagerAccessor",
-		"MinecraftClientMixin",
-		"SectionCompilerMixin"
+		"SodiumChunkBuilderMeshingTaskMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
