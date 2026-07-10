@@ -34,6 +34,10 @@
 		{
 			"config": "underlay.client.jade.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "underlay.client.sodium.mixins.json",
+			"environment": "client"
 		}
 	],
 	"depends": {
