@@ -2,6 +2,7 @@ package com.dooji.underlay;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -31,6 +32,7 @@ public class UnderlayRenderer {
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, OverlayMovingBlockRenderState> MOVING_BLOCK_CACHE = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> BLOCK_ENTITY_OVERLAYS = ConcurrentHashMap.newKeySet();
 
     private static ModelBlockRenderer blockRenderer;
     private static boolean cachedAmbientOcclusion;
@@ -41,21 +43,31 @@ public class UnderlayRenderer {
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
-        RENDER_CACHE.put(pos.immutable(), state);
-        BLOCK_ENTITY_CACHE.remove(pos);
-        MOVING_BLOCK_CACHE.remove(pos);
+        BlockPos immutablePos = pos.immutable();
+        RENDER_CACHE.put(immutablePos, state);
+
+        if (state.getBlock() instanceof EntityBlock) {
+            BLOCK_ENTITY_OVERLAYS.add(immutablePos);
+        } else {
+            BLOCK_ENTITY_OVERLAYS.remove(immutablePos);
+        }
+
+        BLOCK_ENTITY_CACHE.remove(immutablePos);
+        MOVING_BLOCK_CACHE.remove(immutablePos);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
         RENDER_CACHE.remove(pos);
         BLOCK_ENTITY_CACHE.remove(pos);
         MOVING_BLOCK_CACHE.remove(pos);
+        BLOCK_ENTITY_OVERLAYS.remove(pos);
     }
 
     public static void clearAllOverlays() {
         RENDER_CACHE.clear();
         BLOCK_ENTITY_CACHE.clear();
         MOVING_BLOCK_CACHE.clear();
+        BLOCK_ENTITY_OVERLAYS.clear();
     }
 
     public static void forceRefresh() {
@@ -83,8 +95,6 @@ public class UnderlayRenderer {
         ClientLevel world = client.level;
         BlockStateModelSet blockStateModelSet = client.getModelManager().getBlockStateModelSet();
         OrderedSubmitNodeCollector orderedCommandQueue = commandQueue.order(0);
-        BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
-        blockEntityRenderDispatcher.prepare(cameraPos);
         boolean cutoutLeaves = client.options.cutoutLeaves().get();
         ModelBlockRenderer blockRenderer = getBlockRenderer(client);
         int chunks = client.options.renderDistance().get();
@@ -112,8 +122,28 @@ public class UnderlayRenderer {
             submitOverlayBlockLayer(orderedCommandQueue, matrices, blockRenderer, movingBlockRenderState, pos, state, model, ChunkSectionLayer.CUTOUT, RenderTypes.cutoutMovingBlock(), forceOpaque);
             submitOverlayBlockLayer(orderedCommandQueue, matrices, blockRenderer, movingBlockRenderState, pos, state, model, ChunkSectionLayer.TRANSLUCENT, RenderTypes.translucentMovingBlock(), false);
             matrices.popPose();
+        }
+
+        if (BLOCK_ENTITY_OVERLAYS.isEmpty()) {
+            return;
+        }
+
+        BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
+        blockEntityRenderDispatcher.prepare(cameraPos);
+
+        for (BlockPos pos : BLOCK_ENTITY_OVERLAYS) {
+            BlockState state = RENDER_CACHE.get(pos);
+            if (state == null) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                continue;
+            }
+
+            if (pos.distSqr(client.player.blockPosition()) > maxDistSq) {
+                continue;
+            }
 
             if (!(state.getBlock() instanceof EntityBlock entityBlock)) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
                 continue;
             }
 
