@@ -1,88 +1,123 @@
 package com.dooji.underlay;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.fabricmc.loader.api.FabricLoader;
-import net.irisshaders.iris.api.v0.IrisApi;
+import net.fabricmc.fabric.impl.client.indigo.renderer.accessor.AccessChunkRendererRegion;
+import net.fabricmc.fabric.impl.client.indigo.renderer.render.TerrainRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.chunk.RenderSectionRegion;
 import net.minecraft.client.renderer.state.LevelRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
+import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 public class UnderlayRenderer {
-    private static final RandomSource RANDOM = RandomSource.create();
-    private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
-    private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
-    private static final Set<BlockPos> BLOCK_ENTITY_OVERLAYS = ConcurrentHashMap.newKeySet();
-
-    private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
+    private static final Map<Long, Map<BlockPos, BlockState>> SECTION_CACHE = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, BlockState> BE_STATES = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, CachedBlockEntity> BE_CACHE = new ConcurrentHashMap<>();
 
     public static void init() {
         WorldRenderEvents.BEFORE_ENTITIES.register(UnderlayRenderer::renderOverlayBlockEntities);
-        WorldRenderEvents.BEFORE_TRANSLUCENT.register(UnderlayRenderer::renderOverlayBlocks);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         BlockPos immutablePos = pos.immutable();
-        RENDER_CACHE.put(immutablePos, state);
+        long section = SectionPos.asLong(immutablePos);
+        SECTION_CACHE.computeIfAbsent(section, key -> new ConcurrentHashMap<>()).put(immutablePos, state);
 
         if (state.getBlock() instanceof EntityBlock) {
-            BLOCK_ENTITY_OVERLAYS.add(immutablePos);
+            BE_STATES.put(immutablePos, state);
         } else {
-            BLOCK_ENTITY_OVERLAYS.remove(immutablePos);
+            BE_STATES.remove(immutablePos);
         }
 
-        BLOCK_ENTITY_CACHE.remove(immutablePos);
+        BE_CACHE.remove(immutablePos);
+        markSectionDirty(section);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
-        RENDER_CACHE.remove(pos);
-        BLOCK_ENTITY_CACHE.remove(pos);
-        BLOCK_ENTITY_OVERLAYS.remove(pos);
+        long section = SectionPos.asLong(pos);
+        Map<BlockPos, BlockState> overlays = SECTION_CACHE.get(section);
+        if (overlays != null) {
+            overlays.remove(pos);
+            if (overlays.isEmpty()) {
+                SECTION_CACHE.remove(section, overlays);
+            }
+        }
+
+        BE_CACHE.remove(pos);
+        BE_STATES.remove(pos);
+        markSectionDirty(section);
     }
 
     public static void clearAllOverlays() {
-        RENDER_CACHE.clear();
-        BLOCK_ENTITY_CACHE.clear();
-        BLOCK_ENTITY_OVERLAYS.clear();
+        SECTION_CACHE.clear();
+        BE_STATES.clear();
+        BE_CACHE.clear();
     }
 
     public static void forceRefresh() {
+        Set<Long> dirtySections = new HashSet<>(SECTION_CACHE.keySet());
         clearAllOverlays();
-        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
+        UnderlayManagerClient.getAll().forEach((pos, state) -> {
+            registerOverlay(pos, state);
+            dirtySections.remove(SectionPos.asLong(pos));
+        });
+        dirtySections.forEach(UnderlayRenderer::markSectionDirty);
     }
 
-    private static boolean isShadersActive() {
-        if (IS_IRIS_INSTALLED) {
-            return IrisHelper.isShaderPackInUse();
+    public static Map<BlockPos, BlockState> getSectionOverlays(long section) {
+        Map<BlockPos, BlockState> overlays = SECTION_CACHE.get(section);
+        if (overlays == null || overlays.isEmpty()) {
+            return Map.of();
         }
 
-        return false;
+        Map<BlockPos, BlockState> sectionOverlays = new HashMap<>();
+        overlays.forEach((pos, state) -> {
+            if (state.getRenderShape() == RenderShape.MODEL) {
+                sectionOverlays.put(pos, state);
+            }
+        });
+        return sectionOverlays;
+    }
+
+    public static void renderSectionOverlays(RenderSectionRegion region, PoseStack poseStack, BlockRenderDispatcher blockRenderer, Map<BlockPos, BlockState> overlays) {
+        TerrainRenderContext renderer = ((AccessChunkRendererRegion) region).fabric_getRenderer();
+
+        for (Map.Entry<BlockPos, BlockState> overlay : overlays.entrySet()) {
+            BlockPos pos = overlay.getKey();
+            BlockState state = overlay.getValue();
+            int x = SectionPos.sectionRelative(pos.getX());
+            int y = SectionPos.sectionRelative(pos.getY());
+            int z = SectionPos.sectionRelative(pos.getZ());
+
+            poseStack.pushPose();
+
+            try {
+                poseStack.translate(x + 0.5D, y + 0.5D, z + 0.5D);
+                poseStack.scale(1.0001F, 1.0001F, 1.0001F);
+                poseStack.translate(-x - 0.5D, -y - 0.5D, -z - 0.5D);
+                renderer.bufferModel(blockRenderer.getBlockModel(state), state, pos);
+            } finally {
+                poseStack.popPose();
+            }
+        }
     }
 
     private static PoseStack getMatrices(WorldRenderContext context) {
@@ -90,100 +125,21 @@ public class UnderlayRenderer {
         return matrices != null ? matrices : new PoseStack();
     }
 
-    private static void renderOverlayBlocks(WorldRenderContext context) {
-        if (RENDER_CACHE.isEmpty()) {
-            return;
-        }
-
-        Minecraft client = Minecraft.getInstance();
-        PoseStack matrices = getMatrices(context);
-        MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
-        LevelRenderState worldState = context.worldState();
-        Set<RenderType> usedRenderTypes = new HashSet<>();
-
-        renderBlocks(matrices, bufferSource, worldState, usedRenderTypes);
-
-        for (RenderType usedRenderType : usedRenderTypes) {
-            bufferSource.endBatch(usedRenderType);
-        }
-    }
-
     private static void renderOverlayBlockEntities(WorldRenderContext context) {
-        if (BLOCK_ENTITY_OVERLAYS.isEmpty()) {
+        if (BE_STATES.isEmpty()) {
             return;
         }
 
         renderBlockEntities(context);
     }
 
-    private static void renderBlocks(PoseStack matrices, MultiBufferSource vertexConsumers, LevelRenderState worldState, Set<RenderType> usedRenderTypes) {
-        Minecraft client = Minecraft.getInstance();
-        Vec3 cameraPos = worldState != null ? worldState.cameraRenderState.pos : client.gameRenderer.getMainCamera().position();
-
-        if (matrices == null || vertexConsumers == null || client.level == null || client.player == null) {
-            return;
-        }
-
-        BlockRenderDispatcher blockRenderer = client.getBlockRenderer();
-        boolean useEntityRendering = isShadersActive();
-
-        ClientLevel world = client.level;
-        matrices.pushPose();
-        List<BlockModelPart> parts = useEntityRendering ? null : new ArrayList<>();
-
-        for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
-            BlockPos pos = entry.getKey();
-            BlockState state = entry.getValue();
-
-            int chunks = client.options.renderDistance().get();
-            int blocks = chunks * 16;
-            double maxDistSq = (double)blocks * blocks;
-            double distanceSq = pos.distSqr(client.player.blockPosition());
-            if (distanceSq > maxDistSq) {
-                continue;
-            }
-
-            matrices.pushPose();
-            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-
-            matrices.translate(0.5, 0.5, 0.5);
-            matrices.scale(1.0001f, 1.0001f, 1.0001f);
-            matrices.translate(-0.5, -0.5, -0.5);
-
-            int light = LevelRenderer.getLightColor(world, pos);
-            if (useEntityRendering) {
-                RenderType layer = ItemBlockRenderTypes.getRenderType(state);
-                blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
-                if (usedRenderTypes != null) {
-                    usedRenderTypes.add(layer);
-                }
-            } else {
-                BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
-                parts.clear();
-                RANDOM.setSeed(state.getSeed(pos));
-                model.collectParts(RANDOM, parts);
-
-                RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
-                VertexConsumer buffer = vertexConsumers.getBuffer(layer);
-                blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
-                if (usedRenderTypes != null) {
-                    usedRenderTypes.add(layer);
-                }
-            }
-
-            matrices.popPose();
-        }
-
-        matrices.popPose();
-    }
-
     private static void renderBlockEntities(WorldRenderContext context) {
         Minecraft client = Minecraft.getInstance();
         PoseStack matrices = getMatrices(context);
-        MultiBufferSource vertexConsumers = context.consumers();
         LevelRenderState worldState = context.worldState();
         SubmitNodeCollector commandQueue = context.commandQueue();
-        if (vertexConsumers == null || worldState == null || commandQueue == null || client.level == null || client.player == null) {
+        ClientLevel world = client.level;
+        if (worldState == null || commandQueue == null || world == null || client.player == null) {
             return;
         }
 
@@ -191,24 +147,19 @@ public class UnderlayRenderer {
         int chunks = client.options.renderDistance().get();
         int blocks = chunks * 16;
         double maxDistSq = (double)blocks * blocks;
-        ClientLevel world = client.level;
-        BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
-        blockEntityRenderDispatcher.prepare(client.gameRenderer.getMainCamera());
+        BlockEntityRenderDispatcher blockEntityRenderer = client.getBlockEntityRenderDispatcher();
+        blockEntityRenderer.prepare(client.gameRenderer.getMainCamera());
 
         matrices.pushPose();
-        for (BlockPos pos : BLOCK_ENTITY_OVERLAYS) {
-            BlockState state = RENDER_CACHE.get(pos);
-            if (state == null) {
-                BLOCK_ENTITY_OVERLAYS.remove(pos);
-                continue;
-            }
-
+        for (Map.Entry<BlockPos, BlockState> overlay : BE_STATES.entrySet()) {
+            BlockPos pos = overlay.getKey();
+            BlockState state = overlay.getValue();
             if (pos.distSqr(client.player.blockPosition()) > maxDistSq) {
                 continue;
             }
 
             if (!(state.getBlock() instanceof EntityBlock entityBlock)) {
-                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                BE_STATES.remove(pos, state);
                 continue;
             }
 
@@ -219,9 +170,9 @@ public class UnderlayRenderer {
 
             matrices.pushPose();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-            BlockEntityRenderState blockEntityRenderState = blockEntityRenderDispatcher.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
+            BlockEntityRenderState blockEntityRenderState = blockEntityRenderer.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
             if (blockEntityRenderState != null) {
-                blockEntityRenderDispatcher.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
+                blockEntityRenderer.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
             }
             matrices.popPose();
         }
@@ -229,31 +180,49 @@ public class UnderlayRenderer {
         matrices.popPose();
     }
 
-    private static class IrisHelper {
-        public static boolean isShaderPackInUse() {
-            return IrisApi.getInstance().isShaderPackInUse();
-        }
-    }
-
     private static BlockEntity getOrCreateBlockEntity(ClientLevel world, BlockPos pos, BlockState state, EntityBlock entityBlock) {
-        CachedBlockEntity cached = BLOCK_ENTITY_CACHE.get(pos);
+        CachedBlockEntity cached = BE_CACHE.get(pos);
         if (cached != null && cached.state.equals(state)) {
             if (cached.blockEntity.getLevel() != world) {
                 cached.blockEntity.setLevel(world);
             }
-            
+
             return cached.blockEntity;
         }
 
         BlockEntity blockEntity = entityBlock.newBlockEntity(pos, state);
         if (blockEntity == null) {
-            BLOCK_ENTITY_CACHE.remove(pos);
+            BE_CACHE.remove(pos);
             return null;
         }
 
         blockEntity.setLevel(world);
-        BLOCK_ENTITY_CACHE.put(pos.immutable(), new CachedBlockEntity(state, blockEntity));
+        BE_CACHE.put(pos.immutable(), new CachedBlockEntity(state, blockEntity));
         return blockEntity;
+    }
+
+    private static void markSectionDirty(long section) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) {
+            return;
+        }
+
+        BlockPos playerPos = client.player.blockPosition();
+        int sectionX = SectionPos.x(section);
+        int sectionY = SectionPos.y(section);
+        int sectionZ = SectionPos.z(section);
+        int playerSectionX = SectionPos.blockToSectionCoord(playerPos.getX());
+        int playerSectionZ = SectionPos.blockToSectionCoord(playerPos.getZ());
+        int renderDistance = client.options.renderDistance().get();
+        if (sectionY < client.level.getMinSectionY() || sectionY >= client.level.getMaxSectionY()) {
+            return;
+        }
+
+        if (Math.abs(sectionX - playerSectionX) > renderDistance || Math.abs(sectionZ - playerSectionZ) > renderDistance) {
+            return;
+        }
+
+        client.levelRenderer.setSectionDirty(sectionX, sectionY, sectionZ);
     }
 
     private static class CachedBlockEntity {
