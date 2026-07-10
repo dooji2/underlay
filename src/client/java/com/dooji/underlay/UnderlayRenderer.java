@@ -38,6 +38,7 @@ public class UnderlayRenderer {
     private static final RandomSource RANDOM = RandomSource.create();
     private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> BLOCK_ENTITY_OVERLAYS = ConcurrentHashMap.newKeySet();
 
     private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
 
@@ -47,18 +48,28 @@ public class UnderlayRenderer {
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
-        RENDER_CACHE.put(pos.immutable(), state);
-        BLOCK_ENTITY_CACHE.remove(pos);
+        BlockPos immutablePos = pos.immutable();
+        RENDER_CACHE.put(immutablePos, state);
+
+        if (state.getBlock() instanceof EntityBlock) {
+            BLOCK_ENTITY_OVERLAYS.add(immutablePos);
+        } else {
+            BLOCK_ENTITY_OVERLAYS.remove(immutablePos);
+        }
+
+        BLOCK_ENTITY_CACHE.remove(immutablePos);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
         RENDER_CACHE.remove(pos);
         BLOCK_ENTITY_CACHE.remove(pos);
+        BLOCK_ENTITY_OVERLAYS.remove(pos);
     }
 
     public static void clearAllOverlays() {
         RENDER_CACHE.clear();
         BLOCK_ENTITY_CACHE.clear();
+        BLOCK_ENTITY_OVERLAYS.clear();
     }
 
     public static void forceRefresh() {
@@ -80,13 +91,17 @@ public class UnderlayRenderer {
     }
 
     private static void renderOverlayBlocks(WorldRenderContext context) {
+        if (RENDER_CACHE.isEmpty()) {
+            return;
+        }
+
         Minecraft client = Minecraft.getInstance();
         PoseStack matrices = getMatrices(context);
         MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
         LevelRenderState worldState = context.worldState();
         Set<RenderType> usedRenderTypes = new HashSet<>();
 
-        render(matrices, bufferSource, worldState, false, null, usedRenderTypes);
+        renderBlocks(matrices, bufferSource, worldState, usedRenderTypes);
 
         for (RenderType usedRenderType : usedRenderTypes) {
             bufferSource.endBatch(usedRenderType);
@@ -94,17 +109,14 @@ public class UnderlayRenderer {
     }
 
     private static void renderOverlayBlockEntities(WorldRenderContext context) {
-        render(context, false, true);
+        if (BLOCK_ENTITY_OVERLAYS.isEmpty()) {
+            return;
+        }
+
+        renderBlockEntities(context);
     }
 
-    private static void render(WorldRenderContext context, boolean requireContextMatrices, boolean renderBlockEntities) {
-        PoseStack matrices = requireContextMatrices ? context.matrices() : getMatrices(context);
-        MultiBufferSource vertexConsumers = context.consumers();
-        LevelRenderState worldState = context.worldState();
-        render(matrices, vertexConsumers, worldState, renderBlockEntities, context.commandQueue(), null);
-    }
-
-    private static void render(PoseStack matrices, MultiBufferSource vertexConsumers, LevelRenderState worldState, boolean renderBlockEntities, SubmitNodeCollector commandQueue, Set<RenderType> usedRenderTypes) {
+    private static void renderBlocks(PoseStack matrices, MultiBufferSource vertexConsumers, LevelRenderState worldState, Set<RenderType> usedRenderTypes) {
         Minecraft client = Minecraft.getInstance();
         Vec3 cameraPos = worldState != null ? worldState.cameraRenderState.pos : client.gameRenderer.getMainCamera().position();
 
@@ -112,19 +124,10 @@ public class UnderlayRenderer {
             return;
         }
 
-        if (renderBlockEntities && worldState == null) {
-            return;
-        }
-
         BlockRenderDispatcher blockRenderer = client.getBlockRenderer();
         boolean useEntityRendering = isShadersActive();
 
         ClientLevel world = client.level;
-        BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
-        if (renderBlockEntities) {
-            blockEntityRenderDispatcher.prepare(client.gameRenderer.getMainCamera());
-        }
-
         matrices.pushPose();
         List<BlockModelPart> parts = useEntityRendering ? null : new ArrayList<>();
 
@@ -143,41 +146,83 @@ public class UnderlayRenderer {
             matrices.pushPose();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
 
-            if (!renderBlockEntities) {
-                matrices.translate(0.5, 0.5, 0.5);
-                matrices.scale(1.0001f, 1.0001f, 1.0001f);
-                matrices.translate(-0.5, -0.5, -0.5);
+            matrices.translate(0.5, 0.5, 0.5);
+            matrices.scale(1.0001f, 1.0001f, 1.0001f);
+            matrices.translate(-0.5, -0.5, -0.5);
 
-                int light = LevelRenderer.getLightColor(world, pos);
-                if (useEntityRendering) {
-                    RenderType layer = ItemBlockRenderTypes.getRenderType(state);
-                    blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
-                    if (usedRenderTypes != null) {
-                        usedRenderTypes.add(layer);
-                    }
-                } else {
-                    BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
-                    parts.clear();
-                    RANDOM.setSeed(state.getSeed(pos));
-                    model.collectParts(RANDOM, parts);
-
-                    RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
-                    VertexConsumer buffer = vertexConsumers.getBuffer(layer);
-                    blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
-                    if (usedRenderTypes != null) {
-                        usedRenderTypes.add(layer);
-                    }
+            int light = LevelRenderer.getLightColor(world, pos);
+            if (useEntityRendering) {
+                RenderType layer = ItemBlockRenderTypes.getRenderType(state);
+                blockRenderer.renderSingleBlock(state, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
+                if (usedRenderTypes != null) {
+                    usedRenderTypes.add(layer);
                 }
-            } else if (commandQueue != null && state.getBlock() instanceof EntityBlock entityBlock) {
-                BlockEntity blockEntity = getOrCreateBlockEntity(world, pos, state, entityBlock);
-                if (blockEntity != null) {
-                    BlockEntityRenderState blockEntityRenderState = blockEntityRenderDispatcher.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
-                    if (blockEntityRenderState != null) {
-                        blockEntityRenderDispatcher.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
-                    }
+            } else {
+                BlockStateModel model = blockRenderer.getBlockModelShaper().getBlockModel(state);
+                parts.clear();
+                RANDOM.setSeed(state.getSeed(pos));
+                model.collectParts(RANDOM, parts);
+
+                RenderType layer = ItemBlockRenderTypes.getMovingBlockRenderType(state);
+                VertexConsumer buffer = vertexConsumers.getBuffer(layer);
+                blockRenderer.renderBatched(state, pos, world, matrices, buffer, true, parts);
+                if (usedRenderTypes != null) {
+                    usedRenderTypes.add(layer);
                 }
             }
 
+            matrices.popPose();
+        }
+
+        matrices.popPose();
+    }
+
+    private static void renderBlockEntities(WorldRenderContext context) {
+        Minecraft client = Minecraft.getInstance();
+        PoseStack matrices = getMatrices(context);
+        MultiBufferSource vertexConsumers = context.consumers();
+        LevelRenderState worldState = context.worldState();
+        SubmitNodeCollector commandQueue = context.commandQueue();
+        if (vertexConsumers == null || worldState == null || commandQueue == null || client.level == null || client.player == null) {
+            return;
+        }
+
+        Vec3 cameraPos = worldState.cameraRenderState.pos;
+        int chunks = client.options.renderDistance().get();
+        int blocks = chunks * 16;
+        double maxDistSq = (double)blocks * blocks;
+        ClientLevel world = client.level;
+        BlockEntityRenderDispatcher blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
+        blockEntityRenderDispatcher.prepare(client.gameRenderer.getMainCamera());
+
+        matrices.pushPose();
+        for (BlockPos pos : BLOCK_ENTITY_OVERLAYS) {
+            BlockState state = RENDER_CACHE.get(pos);
+            if (state == null) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                continue;
+            }
+
+            if (pos.distSqr(client.player.blockPosition()) > maxDistSq) {
+                continue;
+            }
+
+            if (!(state.getBlock() instanceof EntityBlock entityBlock)) {
+                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                continue;
+            }
+
+            BlockEntity blockEntity = getOrCreateBlockEntity(world, pos, state, entityBlock);
+            if (blockEntity == null) {
+                continue;
+            }
+
+            matrices.pushPose();
+            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+            BlockEntityRenderState blockEntityRenderState = blockEntityRenderDispatcher.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
+            if (blockEntityRenderState != null) {
+                blockEntityRenderDispatcher.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
+            }
             matrices.popPose();
         }
 
