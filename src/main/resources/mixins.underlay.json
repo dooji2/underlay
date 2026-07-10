@@ -8,6 +8,7 @@
     "StandingAndWallBlockItemAccessor"
   ],
   "client": [
+    "ChunkRebuildTaskMixin",
     "MultiPlayerGameModeAccessor",
     "MinecraftMixin"
   ],
