@@ -1,81 +1,127 @@
 package com.dooji.underlay;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.BlockEntityProvider;
-import net.irisshaders.iris.api.v0.IrisApi;
+import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.*;
+import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.BlockRenderView;
 
 public class UnderlayRenderer {
-    private static final Random RANDOM = Random.create();
-    private static final Map<BlockPos, BlockState> RENDER_CACHE = new ConcurrentHashMap<>();
-    private static final Map<BlockPos, CachedBlockEntity> BLOCK_ENTITY_CACHE = new ConcurrentHashMap<>();
-    private static final Set<BlockPos> BLOCK_ENTITY_OVERLAYS = ConcurrentHashMap.newKeySet();
-
-    private static final boolean IS_IRIS_INSTALLED = FabricLoader.getInstance().isModLoaded("iris");
+    private static final Map<Long, Map<BlockPos, BlockState>> SECTION_CACHE = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, BlockState> BE_STATES = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, CachedBlockEntity> BE_CACHE = new ConcurrentHashMap<>();
 
     public static void init() {
         WorldRenderEvents.BEFORE_ENTITIES.register(UnderlayRenderer::renderOverlayBlockEntities);
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(UnderlayRenderer::renderOverlayBlocks);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
         BlockPos immutablePos = pos.toImmutable();
-        RENDER_CACHE.put(immutablePos, state);
+        long section = ChunkSectionPos.toLong(immutablePos);
+        SECTION_CACHE.computeIfAbsent(section, key -> new ConcurrentHashMap<>()).put(immutablePos, state);
 
         if (state.getBlock() instanceof BlockEntityProvider) {
-            BLOCK_ENTITY_OVERLAYS.add(immutablePos);
+            BE_STATES.put(immutablePos, state);
         } else {
-            BLOCK_ENTITY_OVERLAYS.remove(immutablePos);
+            BE_STATES.remove(immutablePos);
         }
 
-        BLOCK_ENTITY_CACHE.remove(immutablePos);
+        BE_CACHE.remove(immutablePos);
+        markSectionDirty(section);
     }
 
     public static void unregisterOverlay(BlockPos pos) {
-        RENDER_CACHE.remove(pos);
-        BLOCK_ENTITY_CACHE.remove(pos);
-        BLOCK_ENTITY_OVERLAYS.remove(pos);
+        long section = ChunkSectionPos.toLong(pos);
+        Map<BlockPos, BlockState> overlays = SECTION_CACHE.get(section);
+        if (overlays != null) {
+            overlays.remove(pos);
+            if (overlays.isEmpty()) {
+                SECTION_CACHE.remove(section, overlays);
+            }
+        }
+
+        BE_CACHE.remove(pos);
+        BE_STATES.remove(pos);
+        markSectionDirty(section);
     }
 
     public static void clearAllOverlays() {
-        RENDER_CACHE.clear();
-        BLOCK_ENTITY_CACHE.clear();
-        BLOCK_ENTITY_OVERLAYS.clear();
+        SECTION_CACHE.clear();
+        BE_STATES.clear();
+        BE_CACHE.clear();
     }
 
     public static void forceRefresh() {
+        Set<Long> dirtySections = new HashSet<>(SECTION_CACHE.keySet());
         clearAllOverlays();
-        UnderlayManagerClient.getAll().forEach(UnderlayRenderer::registerOverlay);
+        UnderlayManagerClient.getAll().forEach((pos, state) -> {
+            registerOverlay(pos, state);
+            dirtySections.remove(ChunkSectionPos.toLong(pos));
+        });
+        dirtySections.forEach(UnderlayRenderer::markSectionDirty);
     }
 
-    private static boolean isShadersActive() {
-        if (IS_IRIS_INSTALLED) {
-            return IrisHelper.isShaderPackInUse();
+    public static Map<BlockPos, BlockState> getSectionOverlays(long section) {
+        Map<BlockPos, BlockState> overlays = SECTION_CACHE.get(section);
+        if (overlays == null || overlays.isEmpty()) {
+            return Map.of();
         }
 
-        return false;
+        Map<BlockPos, BlockState> sectionOverlays = new HashMap<>();
+        overlays.forEach((pos, state) -> {
+            if (state.getRenderType() == BlockRenderType.MODEL) {
+                sectionOverlays.put(pos, state);
+            }
+        });
+        return sectionOverlays;
     }
 
-    private static class IrisHelper {
-        public static boolean isShaderPackInUse() {
-            return IrisApi.getInstance().isShaderPackInUse();
+    public static void renderSectionOverlays(BlockRenderView region, MatrixStack matrices, BlockRenderManager blockRenderer, Map<BlockPos, BlockState> overlays, Function<RenderLayer, VertexConsumer> buffers) {
+        Random random = Random.create();
+
+        for (Map.Entry<BlockPos, BlockState> overlay : overlays.entrySet()) {
+            BlockPos pos = overlay.getKey();
+            BlockState state = overlay.getValue();
+            long seed = state.getRenderingSeed(pos);
+            random.setSeed(seed);
+
+            matrices.push();
+
+            try {
+                matrices.translate(
+                    ChunkSectionPos.getLocalCoord(pos.getX()),
+                    ChunkSectionPos.getLocalCoord(pos.getY()),
+                    ChunkSectionPos.getLocalCoord(pos.getZ())
+                );
+                matrices.translate(0.5D, 0.5D, 0.5D);
+                matrices.scale(1.0001F, 1.0001F, 1.0001F);
+                matrices.translate(-0.5D, -0.5D, -0.5D);
+
+                RenderLayer renderLayer = RenderLayers.getBlockLayer(state);
+                VertexConsumer vertexConsumer = buffers.apply(renderLayer);
+                blockRenderer.renderBlock(state, pos, region, matrices, vertexConsumer, true, random);
+            } finally {
+                matrices.pop();
+            }
         }
     }
 
@@ -84,76 +130,12 @@ public class UnderlayRenderer {
         return matrices != null ? matrices : new MatrixStack();
     }
 
-    private static void renderOverlayBlocks(WorldRenderContext context) {
-        if (RENDER_CACHE.isEmpty()) {
-            return;
-        }
-
-        renderBlocks(context);
-    }
-
     private static void renderOverlayBlockEntities(WorldRenderContext context) {
-        if (BLOCK_ENTITY_OVERLAYS.isEmpty()) {
+        if (BE_STATES.isEmpty()) {
             return;
         }
 
         renderBlockEntities(context);
-    }
-
-    private static void renderBlocks(WorldRenderContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        MatrixStack matrices = context.matrixStack();
-        VertexConsumerProvider vertexConsumers = context.consumers();
-        Vec3d cameraPos = context.camera().getPos();
-        if (matrices == null || vertexConsumers == null || context.world() == null || client.player == null) {
-            return;
-        }
-
-        int chunks = client.options.getViewDistance().getValue();
-        int blocks = chunks * 16;
-        double maxDistSq = (double)blocks * blocks;
-        BlockRenderManager blockRenderer = client.getBlockRenderManager();
-        boolean useEntityRendering = isShadersActive();
-
-        matrices.push();
-        List<BlockPos> stalePositions = new ArrayList<>();
-        for (Map.Entry<BlockPos, BlockState> entry : RENDER_CACHE.entrySet()) {
-            BlockPos pos = entry.getKey();
-            BlockState state = entry.getValue();
-
-            double distanceSq = pos.getSquaredDistance(client.player.getBlockPos());
-            if (distanceSq > maxDistSq) {
-                continue;
-            }
-
-            if (!UnderlayManagerClient.hasOverlay(pos)) {
-                stalePositions.add(pos);
-                continue;
-            }
-
-            matrices.push();
-            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-
-            matrices.translate(0.5, 0.5, 0.5);
-            matrices.scale(1.0001f, 1.0001f, 1.0001f);
-            matrices.translate(-0.5, -0.5, -0.5);
-
-            VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getCutoutMipped());
-            int light = WorldRenderer.getLightmapCoordinates(context.world(), pos);
-            if (useEntityRendering) {
-                blockRenderer.renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
-            } else {
-                blockRenderer.renderBlock(state, pos, context.world(), matrices, buffer, true, RANDOM);
-            }
-
-            matrices.pop();
-        }
-
-        matrices.pop();
-
-        for (BlockPos stalePos : stalePositions) {
-            unregisterOverlay(stalePos);
-        }
     }
 
     private static void renderBlockEntities(WorldRenderContext context) {
@@ -161,40 +143,37 @@ public class UnderlayRenderer {
         MatrixStack matrices = getMatrices(context);
         VertexConsumerProvider vertexConsumers = context.consumers();
         Vec3d cameraPos = context.camera().getPos();
-        if (vertexConsumers == null || context.world() == null || client.player == null) {
+        ClientWorld world = context.world();
+        if (vertexConsumers == null || world == null || client.player == null) {
             return;
         }
 
         int chunks = client.options.getViewDistance().getValue();
         int blocks = chunks * 16;
         double maxDistSq = (double)blocks * blocks;
+        BlockEntityRenderDispatcher blockEntityRenderer = client.getBlockEntityRenderDispatcher();
 
         matrices.push();
-        for (BlockPos pos : BLOCK_ENTITY_OVERLAYS) {
-            BlockState state = RENDER_CACHE.get(pos);
-            if (state == null) {
-                BLOCK_ENTITY_OVERLAYS.remove(pos);
-                continue;
-            }
-
-            double distanceSq = pos.getSquaredDistance(client.player.getBlockPos());
-            if (distanceSq > maxDistSq) {
+        for (Map.Entry<BlockPos, BlockState> overlay : BE_STATES.entrySet()) {
+            BlockPos pos = overlay.getKey();
+            BlockState state = overlay.getValue();
+            if (pos.getSquaredDistance(client.player.getBlockPos()) > maxDistSq) {
                 continue;
             }
 
             if (!(state.getBlock() instanceof BlockEntityProvider provider)) {
-                BLOCK_ENTITY_OVERLAYS.remove(pos);
+                BE_STATES.remove(pos, state);
                 continue;
             }
 
-            BlockEntity blockEntity = getOrCreateBlockEntity(context.world(), pos, state, provider);
+            BlockEntity blockEntity = getOrCreateBlockEntity(world, pos, state, provider);
             if (blockEntity == null) {
                 continue;
             }
 
             matrices.push();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-            client.getBlockEntityRenderDispatcher().render(blockEntity, client.getRenderTickCounter().getTickDelta(true), matrices, vertexConsumers);
+            blockEntityRenderer.render(blockEntity, client.getRenderTickCounter().getTickDelta(true), matrices, vertexConsumers);
             matrices.pop();
         }
 
@@ -202,7 +181,7 @@ public class UnderlayRenderer {
     }
 
     private static BlockEntity getOrCreateBlockEntity(ClientWorld world, BlockPos pos, BlockState state, BlockEntityProvider provider) {
-        CachedBlockEntity cached = BLOCK_ENTITY_CACHE.get(pos);
+        CachedBlockEntity cached = BE_CACHE.get(pos);
         if (cached != null && cached.state.equals(state)) {
             if (cached.blockEntity.getWorld() != world) {
                 cached.blockEntity.setWorld(world);
@@ -213,13 +192,37 @@ public class UnderlayRenderer {
 
         BlockEntity blockEntity = provider.createBlockEntity(pos, state);
         if (blockEntity == null) {
-            BLOCK_ENTITY_CACHE.remove(pos);
+            BE_CACHE.remove(pos);
             return null;
         }
 
         blockEntity.setWorld(world);
-        BLOCK_ENTITY_CACHE.put(pos.toImmutable(), new CachedBlockEntity(state, blockEntity));
+        BE_CACHE.put(pos.toImmutable(), new CachedBlockEntity(state, blockEntity));
         return blockEntity;
+    }
+
+    private static void markSectionDirty(long section) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || client.player == null) {
+            return;
+        }
+
+        BlockPos playerPos = client.player.getBlockPos();
+        int sectionX = ChunkSectionPos.unpackX(section);
+        int sectionY = ChunkSectionPos.unpackY(section);
+        int sectionZ = ChunkSectionPos.unpackZ(section);
+        int playerSectionX = ChunkSectionPos.getSectionCoord(playerPos.getX());
+        int playerSectionZ = ChunkSectionPos.getSectionCoord(playerPos.getZ());
+        int renderDistance = client.options.getViewDistance().getValue();
+        if (sectionY < client.world.getBottomSectionCoord() || sectionY >= client.world.getTopSectionCoord()) {
+            return;
+        }
+
+        if (Math.abs(sectionX - playerSectionX) > renderDistance || Math.abs(sectionZ - playerSectionZ) > renderDistance) {
+            return;
+        }
+
+        client.worldRenderer.scheduleBlockRenders(sectionX, sectionY, sectionZ);
     }
 
     private static class CachedBlockEntity {
