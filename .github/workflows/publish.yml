@@ -36,6 +36,9 @@ jobs:
             1.12.2)
               JAVA_VERSION=8
               ;;
+            26.*)
+              JAVA_VERSION=25
+              ;;
             *)
               JAVA_VERSION=21
               ;;
@@ -115,6 +118,16 @@ jobs:
               DISPLAY_VERSION='1.21.1'
               LOADER_LINES=$'neoforge'
               GAME_VERSION_LINES=$'1.21.1'
+              ;;
+            26.1)
+              DISPLAY_VERSION='26.1'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'26.1\n26.1.1\n26.1.2'
+              ;;
+            26.2)
+              DISPLAY_VERSION='26.2'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'26.2'
               ;;
             *)
               echo "Unsupported branch for publish mapping: $BRANCH"
