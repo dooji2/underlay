@@ -3,6 +3,7 @@
 	"package": "com.dooji.underlay.mixin.client",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"AccessorImplMixin",
 		"BlockAccessorImplMixin",
 		"JadeRayTracingMixin"
 	],
