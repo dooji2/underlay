@@ -93,7 +93,7 @@ public class UnderlayClient implements ClientModInitializer {
 			FlashbackCompat.onClientTick(client);
 		}
 
-		if (client.screen != null) return;
+		if (client.gui.screen() != null) return;
 
 		handleContinuousBreaking(client);
 	}

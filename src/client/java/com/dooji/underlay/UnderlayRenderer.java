@@ -15,6 +15,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockStateModelSet;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.chunk.RenderSectionRegion;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
@@ -171,9 +172,14 @@ public class UnderlayRenderer {
                 continue;
             }
 
+            BlockEntityRenderer<BlockEntity, ?> renderer = blockEntityRenderer.getRenderer(blockEntity);
+            if (renderer == null) {
+                continue;
+            }
+
             matrices.pushPose();
             matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-            BlockEntityRenderState blockEntityRenderState = blockEntityRenderer.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null);
+            BlockEntityRenderState blockEntityRenderState = blockEntityRenderer.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null, renderer.shouldRenderOffScreen());
             if (blockEntityRenderState != null) {
                 blockEntityRenderer.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
             }
@@ -225,7 +231,7 @@ public class UnderlayRenderer {
             return;
         }
 
-        client.levelRenderer.setSectionDirty(sectionX, sectionY, sectionZ);
+        client.level.setSectionRangeDirty(sectionX, sectionY, sectionZ, sectionX, sectionY, sectionZ);
     }
 
     private static class CachedBlockEntity {
