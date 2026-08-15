@@ -19,7 +19,7 @@ public class UnderlayCommands {
 												.then(CommandManager.argument("value", BoolArgumentType.bool())
 														.executes(context -> setPlaceOnReplaceableBlocks(
 																context.getSource(),
-																BoolArgumentType.getBool(context, "value"))))))));
+																BoolArgumentType.getBool(context, "value")))))))));
 	}
 
 	private static int setPlaceOnReplaceableBlocks(ServerCommandSource source, boolean value) {
