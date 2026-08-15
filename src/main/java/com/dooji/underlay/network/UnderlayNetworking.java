@@ -128,7 +128,7 @@ public class UnderlayNetworking {
 		}
 	}
 
-	private static void broadcastRemove(ServerLevel world, BlockPos pos) {
+	public static void broadcastRemove(ServerLevel world, BlockPos pos) {
 		RemoveOverlayPayload payload = new RemoveOverlayPayload(pos);
 
 		for (ServerPlayer p : world.players()) {
