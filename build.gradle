@@ -49,6 +49,7 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	compileOnly "maven.modrinth:iris:${iris_version}"
 	compileOnly "maven.modrinth:sodium:${sodium_version}"
+	compileOnly "maven.modrinth:1u6JkXh5:${project.worldedit_version_id}"
 	if (!project.hasProperty("noIrisRuntime")) {
 		localRuntime "maven.modrinth:iris:${iris_version}"
 	}

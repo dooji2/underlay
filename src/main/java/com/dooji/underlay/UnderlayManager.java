@@ -97,6 +97,16 @@ public class UnderlayManager {
         return false;
     }
 
+    public static boolean removeOverlayAndBroadcast(Level world, BlockPos pos) {
+        boolean removed = removeOverlay(world, pos);
+
+        if (removed && !world.isClientSide() && world instanceof ServerLevel serverWorld) {
+            UnderlayNetworking.broadcastRemove(serverWorld, pos);
+        }
+
+        return removed;
+    }
+
     public static boolean hasOverlay(Level world, BlockPos pos) {
         String dimensionKey = getDimensionKey(world);
         Map<BlockPos, BlockState> worldOverlays = OVERLAYS.get(dimensionKey);
