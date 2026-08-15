@@ -1,6 +1,7 @@
 package com.dooji.underlay.main.events;
 
 import com.dooji.underlay.main.Underlay;
+import com.dooji.underlay.main.UnderlayConfig;
 import com.dooji.underlay.mixin.StandingAndWallBlockItemAccessor;
 import com.dooji.underlay.main.UnderlayManager;
 import com.dooji.underlay.main.UnderlayRegistry;
@@ -88,7 +89,7 @@ public class BlockInteractionEvents {
             return;
         }
 
-        if (existingState.canBeReplaced(placementContext)) {
+        if (existingState.canBeReplaced(placementContext) && !UnderlayConfig.canPlaceOnReplaceableBlocks()) {
             return;
         }
 
