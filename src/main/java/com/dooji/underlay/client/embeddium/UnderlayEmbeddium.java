@@ -1,4 +1,4 @@
-package com.dooji.underlay.client.compat;
+package com.dooji.underlay.client.embeddium;
 
 import java.util.Map;
 
@@ -12,10 +12,10 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import org.embeddedt.embeddium.api.ChunkMeshEvent;
 
-public final class UnderlayEmbeddiumCompat {
+public final class UnderlayEmbeddium {
     private static boolean initialized;
 
-    private UnderlayEmbeddiumCompat() {
+    private UnderlayEmbeddium() {
     }
 
     public static void init() {
@@ -24,7 +24,7 @@ public final class UnderlayEmbeddiumCompat {
         }
 
         initialized = true;
-        ChunkMeshEvent.BUS.addListener(UnderlayEmbeddiumCompat::addOverlays);
+        ChunkMeshEvent.BUS.addListener(UnderlayEmbeddium::addOverlays);
     }
 
     private static void addOverlays(ChunkMeshEvent event) {

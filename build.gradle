@@ -162,6 +162,7 @@ dependencies {
 
     compileOnly "maven.modrinth:nvQzSEkH:${project.jade_version_id}"
     compileOnly "maven.modrinth:sk9rgfiA:${project.embeddium_version_id}"
+    compileOnly "maven.modrinth:1u6JkXh5:${project.worldedit_version_id}"
     // create stuff
     compileOnly(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
     compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
@@ -183,6 +184,7 @@ mixin {
     config 'mixins.underlay.json'
     config 'mixins.underlay.create.json'
     config 'mixins.underlay.jade.json'
+    config 'mixins.underlay.worldedit.json'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

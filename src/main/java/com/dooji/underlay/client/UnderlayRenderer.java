@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.dooji.underlay.client.compat.UnderlayEmbeddiumCompat;
+import com.dooji.underlay.client.embeddium.UnderlayEmbeddium;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -42,7 +42,7 @@ public class UnderlayRenderer {
 
     public static void init() {
         if (ModList.get().isLoaded("embeddium")) {
-            UnderlayEmbeddiumCompat.init();
+            UnderlayEmbeddium.init();
         }
     }
 
