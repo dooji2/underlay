@@ -30,12 +30,18 @@ public class UnderlayConfig {
 	public static final String OVERLAY_BLOCKS_KEY = "overlay_blocks";
 	public static final String EXCLUDE_BLOCKS_KEY = "exclude_blocks";
 	public static final String TARGET_EXCLUDE_BLOCKS_KEY = "target_exclude_blocks";
+	public static final String PLACE_ON_REPLACEABLE_BLOCKS_KEY = "place_on_replaceable_blocks";
+	private static final String COMMANDS_OP_LEVEL_KEY = "commands_op_level";
+	private static final String OPTIONS_KEY = "options";
 	private static final String CONFIG_FILE_NAME = "underlay.json";
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static UnderlayConfig current = new UnderlayConfig();
 
 	private final List<String> overlayBlocks = new ArrayList<>();
 	private final List<String> excludeBlocks = new ArrayList<>();
 	private final List<String> targetExcludeBlocks = new ArrayList<>();
+	private int commandsOpLevel = 4;
+	private boolean placeOnReplaceableBlocks;
 
 	public static void load(ServerWorld world) {
 		if (world == null || world.isClient()) {
@@ -44,12 +50,25 @@ public class UnderlayConfig {
 
 		UnderlayRegistry.clearLoadedBlocks();
 
-		UnderlayConfig config = readConfig();
+		current = readConfig();
 		loadDatapackOverlayBlocks(world);
 		loadDatapackExcludedBlocks(world);
-		registerOverlayBlocks(config);
-		registerExcludedBlocks(config);
-		registerTargetExcludedBlocks(config);
+		registerOverlayBlocks(current);
+		registerExcludedBlocks(current);
+		registerTargetExcludedBlocks(current);
+	}
+
+	public static int getCommandsOpLevel() {
+		return current.commandsOpLevel;
+	}
+
+	public static boolean canPlaceOnReplaceableBlocks() {
+		return current.placeOnReplaceableBlocks;
+	}
+
+	public static void setPlaceOnReplaceableBlocks(boolean value) {
+		current.placeOnReplaceableBlocks = value;
+		writeConfig(current);
 	}
 
 	public List<String> getOverlayBlocks() {
@@ -93,6 +112,7 @@ public class UnderlayConfig {
 		JsonArray blocks = new JsonArray();
 		JsonArray excludeBlocks = new JsonArray();
 		JsonArray targetExcludeBlocks = new JsonArray();
+		JsonObject options = new JsonObject();
 
 		for (String blockId : overlayBlocks) {
 			blocks.add(blockId);
@@ -109,6 +129,9 @@ public class UnderlayConfig {
 		}
 
 		root.add(TARGET_EXCLUDE_BLOCKS_KEY, targetExcludeBlocks);
+		root.addProperty(COMMANDS_OP_LEVEL_KEY, commandsOpLevel);
+		options.addProperty(PLACE_ON_REPLACEABLE_BLOCKS_KEY, placeOnReplaceableBlocks);
+		root.add(OPTIONS_KEY, options);
 		return root;
 	}
 
@@ -149,6 +172,20 @@ public class UnderlayConfig {
 				}
 
 				config.addTargetExcludeBlock(entry.getAsString());
+			}
+		}
+
+		if (root.has(COMMANDS_OP_LEVEL_KEY) && root.get(COMMANDS_OP_LEVEL_KEY).isJsonPrimitive()
+				&& root.getAsJsonPrimitive(COMMANDS_OP_LEVEL_KEY).isNumber()) {
+			config.commandsOpLevel = root.get(COMMANDS_OP_LEVEL_KEY).getAsInt();
+		}
+
+		if (root.has(OPTIONS_KEY) && root.get(OPTIONS_KEY).isJsonObject()) {
+			JsonObject options = root.getAsJsonObject(OPTIONS_KEY);
+			if (options.has(PLACE_ON_REPLACEABLE_BLOCKS_KEY)
+					&& options.get(PLACE_ON_REPLACEABLE_BLOCKS_KEY).isJsonPrimitive()
+					&& options.getAsJsonPrimitive(PLACE_ON_REPLACEABLE_BLOCKS_KEY).isBoolean()) {
+				config.placeOnReplaceableBlocks = options.get(PLACE_ON_REPLACEABLE_BLOCKS_KEY).getAsBoolean();
 			}
 		}
 
