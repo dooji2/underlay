@@ -6,6 +6,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.dooji.underlay.UnderlayConfig;
 import com.dooji.underlay.UnderlayManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -44,17 +45,22 @@ public abstract class BlockItemMixin {
 		}
 
 		BlockPos pos = placementContext.getClickedPos();
-		if (!UnderlayManager.hasOverlay(world, pos)) {
+		if (UnderlayManager.hasOverlay(world, pos)) {
+			BlockState overlay = UnderlayManager.getOverlay(world, pos);
+			BlockState newState = resolveOverlayState(self, block, placementContext, context.getClickedFace());
+
+			if (newState != null && overlay.getBlock() == newState.getBlock()) {
+				cir.setReturnValue(InteractionResult.FAIL);
+				cir.cancel();
+				return;
+			}
+		}
+
+		if (!UnderlayConfig.canPlaceOnReplaceableBlocks() || !world.getBlockState(pos).canBeReplaced(placementContext)) {
 			return;
 		}
 
-		BlockState overlay = UnderlayManager.getOverlay(world, pos);
-		BlockState newState = resolveOverlayState(self, block, placementContext, context.getClickedFace());
-
-		if (newState != null && overlay.getBlock() == newState.getBlock()) {
-			cir.setReturnValue(InteractionResult.FAIL);
-			cir.cancel();
-		}
+		placeOverlay(context, placementContext, cir);
 	}
 
 	@Inject(method = "place", at = @At("RETURN"), cancellable = true)
@@ -64,19 +70,26 @@ public abstract class BlockItemMixin {
 			return;
 		}
 
-		BlockItem self = (BlockItem)(Object)this;
-		Block block = self.getBlock();
 		BlockPlaceContext placementContext = this.updatePlacementContext(context);
 		if (placementContext == null) {
 			return;
 		}
 
+		placeOverlay(context, placementContext, cir);
+	}
+
+	private void placeOverlay(BlockPlaceContext context, BlockPlaceContext placementContext, CallbackInfoReturnable<InteractionResult> cir) {
+		BlockItem self = (BlockItem)(Object)this;
+		Block block = self.getBlock();
 		BlockPos pos = placementContext.getClickedPos();
 		Level world = placementContext.getLevel();
 		BlockState existing = world.getBlockState(pos);
-		BlockState newState = resolveOverlayState(self, block, placementContext, context.getClickedFace());
+		BlockState overlay = resolveOverlayState(self, block, placementContext, context.getClickedFace());
+		if (overlay == null) {
+			return;
+		}
 
-		if (newState != null && existing.getBlock() == block && newState.getBlock() == block) {
+		if (existing.getBlock() == block && overlay.getBlock() == block) {
 			return;
 		}
 
@@ -89,11 +102,6 @@ public abstract class BlockItemMixin {
 		}
 
 		if (existing.isAir() || Block.isShapeFullBlock(existing.getShape(world, pos)) || !existing.getFluidState().isEmpty()) {
-			return;
-		}
-
-		BlockState overlay = resolveOverlayState(self, block, placementContext, context.getClickedFace());
-		if (overlay == null) {
 			return;
 		}
 
