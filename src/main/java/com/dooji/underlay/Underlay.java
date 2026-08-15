@@ -24,6 +24,7 @@ public class Underlay implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		UnderlayNetworking.init();
+		UnderlayCommands.register();
 
 		ServerWorldEvents.LOAD.register((server, world) -> {
 			LOGGER.info("Loading overlays for world: " + world.getRegistryKey().getValue());
