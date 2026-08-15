@@ -1,6 +1,7 @@
 package com.dooji.underlay.main.events;
 
 import com.dooji.underlay.mixin.StandingAndWallBlockItemAccessor;
+import com.dooji.underlay.main.UnderlayConfig;
 import com.dooji.underlay.main.UnderlayManager;
 import com.dooji.underlay.main.UnderlayRegistry;
 
@@ -59,11 +60,15 @@ public class BlockInteractionEvents {
 
         BlockPos targetPos = placementContext.getClickedPos();
         BlockState newState = resolveOverlayState(blockItem, block, placementContext, face);
+        if (newState == null) {
+            return;
+        }
+
         BlockState existingState = world.getBlockState(targetPos);
 
         if (UnderlayManager.hasOverlay(world, targetPos)) {
             BlockState overlay = UnderlayManager.getOverlay(world, targetPos);
-            if (newState != null && overlay.getBlock() == newState.getBlock()) {
+            if (overlay.getBlock() == newState.getBlock()) {
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.FAIL);
                 return;
@@ -82,7 +87,7 @@ public class BlockInteractionEvents {
             return;
         }
 
-        if (existingState.canBeReplaced(placementContext)) {
+        if (existingState.canBeReplaced(placementContext) && !UnderlayConfig.canPlaceOnReplaceableBlocks()) {
             return;
         }
 

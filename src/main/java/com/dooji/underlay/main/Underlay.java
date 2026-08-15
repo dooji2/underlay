@@ -30,6 +30,7 @@ public class Underlay {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(new BlockInteractionEvents());
         NeoForge.EVENT_BUS.register(new PlayerEvents());
+        NeoForge.EVENT_BUS.register(new UnderlayCommands());
     }
 
     @SubscribeEvent
