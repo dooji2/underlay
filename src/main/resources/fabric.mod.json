@@ -27,6 +27,7 @@
 	},
 	"mixins": [
 		"underlay.mixins.json",
+		"mixins.underlay.worldedit.json",
 		{
 			"config": "underlay.client.mixins.json",
 			"environment": "client"

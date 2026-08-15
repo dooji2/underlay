@@ -1,4 +1,4 @@
-package com.dooji.underlay.compat;
+package com.dooji.underlay.sodium;
 
 import java.util.List;
 import java.util.Map;
@@ -16,8 +16,8 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 
-public final class UnderlaySodiumCompat {
-    private UnderlaySodiumCompat() {
+public final class UnderlaySodium {
+    private UnderlaySodium() {
     }
 
     public static void renderSectionOverlays(Map<BlockPos, BlockState> overlays, BlockRenderCache cache, BlockRenderContext context, ChunkBuildBuffers buffers) {
@@ -60,7 +60,7 @@ public final class UnderlaySodiumCompat {
 
         @Override
         public List<BakedQuad> getQuads(BlockState state, Direction face, Random random) {
-            return wrapped.getQuads(state, face, random).stream().map(UnderlaySodiumCompat::scale).toList();
+            return wrapped.getQuads(state, face, random).stream().map(UnderlaySodium::scale).toList();
         }
     }
 }

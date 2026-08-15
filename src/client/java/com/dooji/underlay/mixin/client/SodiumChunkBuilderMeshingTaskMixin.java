@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import com.dooji.underlay.UnderlayRenderer;
-import com.dooji.underlay.compat.UnderlaySodiumCompat;
+import com.dooji.underlay.sodium.UnderlaySodium;
 
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSection;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers;
@@ -63,6 +63,6 @@ public class SodiumChunkBuilderMeshingTaskMixin {
             return;
         }
 
-        UnderlaySodiumCompat.renderSectionOverlays(overlays, cache, context, buffers);
+        UnderlaySodium.renderSectionOverlays(overlays, cache, context, buffers);
     }
 }

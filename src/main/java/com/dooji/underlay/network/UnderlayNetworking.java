@@ -87,7 +87,7 @@ public class UnderlayNetworking {
 		}
 	}
 
-	private static void broadcastRemove(ServerWorld world, BlockPos pos) {
+	public static void broadcastRemove(ServerWorld world, BlockPos pos) {
 		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
 		RemoveOverlayPayload.write(buf, new RemoveOverlayPayload(pos));
 
