@@ -119,10 +119,10 @@ public class UnderlayNetworking {
 
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
         CompoundTag tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
-        INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new AddOverlayPayload(pos, tag));
+        INSTANCE.send(PacketDistributor.DIMENSION.with(world::dimension), new AddOverlayPayload(pos, tag));
     }
 
     public static void broadcastRemove(ServerLevel world, BlockPos pos) {
-        INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> world.getChunkAt(pos)), new RemoveOverlayPayload(pos));
+        INSTANCE.send(PacketDistributor.DIMENSION.with(world::dimension), new RemoveOverlayPayload(pos));
     }
 }
