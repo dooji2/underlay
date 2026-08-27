@@ -15,7 +15,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -86,10 +85,10 @@ public class UnderlayNetworking {
 
     public static void broadcastAdd(ServerLevel world, BlockPos pos) {
         CompoundTag tag = NbtUtils.writeBlockState(UnderlayManager.getOverlay(world, pos));
-        PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new AddOverlayPayload(pos, tag));
+        PacketDistributor.sendToPlayersInDimension(world, new AddOverlayPayload(pos, tag));
     }
 
     public static void broadcastRemove(ServerLevel world, BlockPos pos) {
-        PacketDistributor.sendToPlayersTrackingChunk(world, new ChunkPos(pos), new RemoveOverlayPayload(pos));
+        PacketDistributor.sendToPlayersInDimension(world, new RemoveOverlayPayload(pos));
     }
 }
