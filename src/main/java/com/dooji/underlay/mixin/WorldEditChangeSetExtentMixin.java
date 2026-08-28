@@ -28,12 +28,9 @@ public abstract class WorldEditChangeSetExtentMixin {
     @Final
     private ChangeSet changeSet;
 
-    @Shadow
-    public abstract Extent getExtent();
-
     @Inject(method = "setBlock", at = @At("HEAD"))
     private <B extends BlockStateHolder<B>> void setBlock(BlockVector3 location, B block, CallbackInfoReturnable<Boolean> cir) {
-        Extent extent = getExtent();
+        Extent extent = ((ChangeSetExtent)(Object)this).getExtent();
         while (extent instanceof AbstractDelegateExtent delegate) {
             extent = delegate.getExtent();
         }
