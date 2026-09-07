@@ -46,7 +46,7 @@ public final class UnderlaySodium {
         for (int offset = 0; offset < vertexData.length; offset += stride) {
             for (int axis = 0; axis < 3; axis++) {
                 float value = Float.intBitsToFloat(vertexData[offset + axis]);
-                vertexData[offset + axis] = Float.floatToRawIntBits((value - 0.5F) * 1.0001F + 0.5F);
+                vertexData[offset + axis] = Float.floatToRawIntBits((value - 0.5F) * 1.001F + 0.5F);
             }
         }
 

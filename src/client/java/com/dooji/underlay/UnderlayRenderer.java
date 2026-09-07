@@ -113,7 +113,7 @@ public class UnderlayRenderer {
                     ChunkSectionPos.getLocalCoord(pos.getZ())
                 );
                 matrices.translate(0.5D, 0.5D, 0.5D);
-                matrices.scale(1.0001F, 1.0001F, 1.0001F);
+                matrices.scale(1.001F, 1.001F, 1.001F);
                 matrices.translate(-0.5D, -0.5D, -0.5D);
 
                 RenderLayer renderLayer = RenderLayers.getBlockLayer(state);
