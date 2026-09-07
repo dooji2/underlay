@@ -130,7 +130,7 @@ public class UnderlayRenderer {
                     SectionPos.sectionRelative(pos.getZ())
                 );
                 poseStack.translate(0.5D, 0.5D, 0.5D);
-                poseStack.scale(1.0001F, 1.0001F, 1.0001F);
+                poseStack.scale(1.001F, 1.001F, 1.001F);
                 poseStack.translate(-0.5D, -0.5D, -0.5D);
 
                 for (RenderType chunkRenderType : model.getRenderTypes(state, randomSource, modelData)) {
