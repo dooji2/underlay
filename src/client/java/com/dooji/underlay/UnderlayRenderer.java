@@ -108,9 +108,9 @@ public class UnderlayRenderer {
             quadEmitter.pushTransform(quad -> {
                 for (int i = 0; i < 4; i++) {
                     quad.pos(i,
-                        (quad.x(i) - x - 0.5F) * 1.0001F + x + 0.5F,
-                        (quad.y(i) - y - 0.5F) * 1.0001F + y + 0.5F,
-                        (quad.z(i) - z - 0.5F) * 1.0001F + z + 0.5F
+                        (quad.x(i) - x - 0.5F) * 1.001F + x + 0.5F,
+                        (quad.y(i) - y - 0.5F) * 1.001F + y + 0.5F,
+                        (quad.z(i) - z - 0.5F) * 1.001F + z + 0.5F
                     );
                 }
                 return true;
