@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import com.dooji.underlay.client.sable.UnderlaySableClient;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -24,6 +25,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -265,6 +267,12 @@ public class UnderlayRenderer {
         int playerSectionX = SectionPos.blockToSectionCoord(playerPos.getX());
         int playerSectionZ = SectionPos.blockToSectionCoord(playerPos.getZ());
         int renderDistance = client.options.getEffectiveRenderDistance();
+
+        if (ModList.get().isLoaded("sable") && UnderlaySableClient.isInSubLevel(sectionX, sectionZ)) {
+            client.levelRenderer.setSectionDirty(sectionX, sectionY, sectionZ);
+            return;
+        }
+
         if (sectionY < client.level.getMinSection() || sectionY >= client.level.getMaxSection()) {
             return;
         }

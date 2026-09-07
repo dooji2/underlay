@@ -2,6 +2,7 @@ package com.dooji.underlay.main;
 
 import com.dooji.underlay.main.events.BlockInteractionEvents;
 import com.dooji.underlay.main.events.PlayerEvents;
+import com.dooji.underlay.main.events.SableEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -9,6 +10,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -31,6 +33,9 @@ public class Underlay {
         NeoForge.EVENT_BUS.register(new BlockInteractionEvents());
         NeoForge.EVENT_BUS.register(new PlayerEvents());
         NeoForge.EVENT_BUS.register(new UnderlayCommands());
+        if (ModList.get().isLoaded("sable")) {
+            NeoForge.EVENT_BUS.register(new SableEvents());
+        }
     }
 
     @SubscribeEvent

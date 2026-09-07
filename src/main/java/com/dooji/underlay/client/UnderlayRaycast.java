@@ -2,6 +2,8 @@ package com.dooji.underlay.client;
 
 import java.util.Map;
 
+import com.dooji.underlay.client.sable.UnderlaySableClient;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -12,6 +14,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.fml.ModList;
 
 public class UnderlayRaycast {
     private static Object cachedLevel = null;
@@ -37,7 +40,8 @@ public class UnderlayRaycast {
             return cachedHit;
         }
 
-        Vec3 eye = viewer.getEyePosition(tickDelta);
+        boolean sableLoaded = ModList.get().isLoaded("sable");
+        Vec3 eye = sableLoaded ? UnderlaySableClient.getEyePosition(viewer, tickDelta) : viewer.getEyePosition(tickDelta);
         Vec3 look = viewer.getViewVector(tickDelta);
         Vec3 end = eye.add(look.multiply(reach, reach, reach));
         double minX = Math.min(eye.x, end.x) - 1.0;
@@ -54,13 +58,13 @@ public class UnderlayRaycast {
 
         for (Map.Entry<BlockPos, BlockState> entry : UnderlayManagerClient.getAll().entrySet()) {
             BlockPos pos = entry.getKey();
-            if (pos.getX() > maxX || pos.getX() + 1 < minX || pos.getY() > maxY || pos.getY() + 1 < minY || pos.getZ() > maxZ || pos.getZ() + 1 < minZ || pos.distToCenterSqr(eye) > maxReachSq) {
+            if (!sableLoaded && (pos.getX() > maxX || pos.getX() + 1 < minX || pos.getY() > maxY || pos.getY() + 1 < minY || pos.getZ() > maxZ || pos.getZ() + 1 < minZ || pos.distToCenterSqr(eye) > maxReachSq)) {
                 continue;
             }
 
             BlockState state = entry.getValue();
             VoxelShape shape = state.getShape(client.level, pos, collisionContext);
-            BlockHitResult hit = shape.clip(eye, end, pos);
+            BlockHitResult hit = sableLoaded ? UnderlaySableClient.clip(shape, pos, eye, end, tickDelta) : shape.clip(eye, end, pos);
             if (hit == null) {
                 continue;
             }
@@ -69,7 +73,7 @@ public class UnderlayRaycast {
             double distanceSquared = hitPos.distanceToSqr(eye);
 
             ClipContext context = new ClipContext(eye, hitPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, viewer);
-            BlockHitResult worldHit = client.level.clip(context);
+            BlockHitResult worldHit = sableLoaded ? UnderlaySableClient.clip(context, tickDelta) : client.level.clip(context);
 
             if (worldHit.getType() == HitResult.Type.BLOCK && worldHit.getLocation().distanceToSqr(eye) < distanceSquared) continue;
             if (distanceSquared < best) {
