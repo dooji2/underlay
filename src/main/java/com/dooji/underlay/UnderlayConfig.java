@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.nio.charset.StandardCharsets;
 
 import com.google.gson.Gson;
@@ -22,6 +23,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.fabricmc.loader.api.FabricLoader;
@@ -53,9 +55,9 @@ public class UnderlayConfig {
 		current = readConfig();
 		loadDatapackOverlayBlocks(world);
 		loadDatapackExcludedBlocks(world);
-		registerOverlayBlocks(current);
-		registerExcludedBlocks(current);
-		registerTargetExcludedBlocks(current);
+		registerBlocks(world, current.getOverlayBlocks(), UnderlayRegistry::registerOverlayBlock);
+		registerBlocks(world, current.getExcludeBlocks(), UnderlayRegistry::registerExcludedBlock);
+		registerBlocks(world, current.getTargetExcludeBlocks(), UnderlayRegistry::registerTargetExcludedBlock);
 	}
 
 	public static int getCommandsOpLevel() {
@@ -251,8 +253,25 @@ public class UnderlayConfig {
 		});
 	}
 
-	private static void registerOverlayBlocks(UnderlayConfig config) {
-		for (String blockIdString : config.getOverlayBlocks()) {
+	private static void registerBlocks(ServerWorld world, List<String> blockIds, Consumer<Block> register) {
+		RegistryEntryLookup<Block> blocks = world.getRegistryManager().getWrapperOrThrow(RegistryKeys.BLOCK);
+
+		for (String blockIdString : blockIds) {
+			if (blockIdString.startsWith("#")) {
+				Identifier tagId = Identifier.tryParse(blockIdString.substring(1));
+				if (tagId == null) {
+					Underlay.LOGGER.warn("Invalid block tag in underlay config: " + blockIdString);
+					continue;
+				}
+
+				blocks.getOptional(TagKey.of(RegistryKeys.BLOCK, tagId)).ifPresent(list -> {
+					list.stream()
+						.map(RegistryEntry::value)
+						.forEach(register);
+				});
+				continue;
+			}
+
 			Identifier blockId = Identifier.tryParse(blockIdString);
 
 			if (blockId == null) {
@@ -266,45 +285,7 @@ public class UnderlayConfig {
 				continue;
 			}
 
-			UnderlayRegistry.registerOverlayBlock(block);
-		}
-	}
-
-	private static void registerExcludedBlocks(UnderlayConfig config) {
-		for (String blockIdString : config.getExcludeBlocks()) {
-			Identifier blockId = Identifier.tryParse(blockIdString);
-
-			if (blockId == null) {
-				Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
-				continue;
-			}
-
-			Block block = Registries.BLOCK.get(blockId);
-			if (!Registries.BLOCK.getId(block).equals(blockId)) {
-				Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
-				continue;
-			}
-
-			UnderlayRegistry.registerExcludedBlock(block);
-		}
-	}
-
-	private static void registerTargetExcludedBlocks(UnderlayConfig config) {
-		for (String blockIdString : config.getTargetExcludeBlocks()) {
-			Identifier blockId = Identifier.tryParse(blockIdString);
-
-			if (blockId == null) {
-				Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
-				continue;
-			}
-
-			Block block = Registries.BLOCK.get(blockId);
-			if (!Registries.BLOCK.getId(block).equals(blockId)) {
-				Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
-				continue;
-			}
-
-			UnderlayRegistry.registerTargetExcludedBlock(block);
+			register.accept(block);
 		}
 	}
 
