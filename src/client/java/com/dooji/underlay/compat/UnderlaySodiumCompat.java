@@ -47,9 +47,9 @@ public final class UnderlaySodiumCompat {
                 for (int vertex = 0; vertex < 4; vertex++) {
                     quad.pos(
                         vertex,
-                        (quad.x(vertex) - 0.5F) * 1.0001F + 0.5F,
-                        (quad.y(vertex) - 0.5F) * 1.0001F + 0.5F,
-                        (quad.z(vertex) - 0.5F) * 1.0001F + 0.5F
+                        (quad.x(vertex) - 0.5F) * 1.001F + 0.5F,
+                        (quad.y(vertex) - 0.5F) * 1.001F + 0.5F,
+                        (quad.z(vertex) - 0.5F) * 1.001F + 0.5F
                     );
                 }
 
