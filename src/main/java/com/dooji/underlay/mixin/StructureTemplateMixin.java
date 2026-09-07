@@ -117,9 +117,7 @@ public abstract class StructureTemplateMixin {
             return;
         }
 
-        if (!(world instanceof ServerLevel serverLevel)) {
-            return;
-        }
+        ServerLevel serverLevel = world.getLevel();
 
         for (Map.Entry<BlockPos, BlockState> entry : relativeOverlays.entrySet()) {
             BlockPos transformed = calculateRelativePosition(settings, entry.getKey());
