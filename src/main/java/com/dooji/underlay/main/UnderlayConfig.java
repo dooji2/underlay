@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,6 +22,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -52,9 +54,9 @@ public class UnderlayConfig {
         current = readConfig();
         loadDatapackBlocks(world);
         loadDatapackExcludes(world);
-        registerOverlayBlocks(current);
-        registerExcludedBlocks(current);
-        registerTargetExcludedBlocks(current);
+        registerBlocks(world, current.getOverlayBlocks(), UnderlayRegistry::registerOverlayBlock);
+        registerBlocks(world, current.getExcludeBlocks(), UnderlayRegistry::registerExcludedBlock);
+        registerBlocks(world, current.getTargetExcludeBlocks(), UnderlayRegistry::registerTargetExcludedBlock);
     }
 
     public static int getCommandsOpLevel() {
@@ -249,8 +251,24 @@ public class UnderlayConfig {
         }));
     }
 
-    private static void registerOverlayBlocks(UnderlayConfig config) {
-        for (String blockIdString : config.getOverlayBlocks()) {
+    private static void registerBlocks(ServerLevel world, List<String> blockIds, Consumer<Block> register) {
+        Registry<Block> blocks = world.registryAccess().registryOrThrow(Registries.BLOCK);
+
+        for (String blockIdString : blockIds) {
+            if (blockIdString.startsWith("#")) {
+                ResourceLocation tagId;
+
+                try {
+                    tagId = new ResourceLocation(blockIdString.substring(1));
+                } catch (Exception e) {
+                    Underlay.LOGGER.warn("Invalid block tag in underlay config: " + blockIdString);
+                    continue;
+                }
+
+                blocks.getTag(TagKey.create(Registries.BLOCK, tagId)).ifPresent(tag -> tag.forEach(entry -> register.accept(entry.value())));
+                continue;
+            }
+
             ResourceLocation blockId;
 
             try {
@@ -266,49 +284,7 @@ public class UnderlayConfig {
                 continue;
             }
 
-            UnderlayRegistry.registerOverlayBlock(block);
-        }
-    }
-
-    private static void registerExcludedBlocks(UnderlayConfig config) {
-        for (String blockIdString : config.getExcludeBlocks()) {
-            ResourceLocation blockId;
-
-            try {
-                blockId = new ResourceLocation(blockIdString);
-            } catch (Exception e) {
-                Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
-                continue;
-            }
-
-            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
-            if (block == null) {
-                Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
-                continue;
-            }
-
-            UnderlayRegistry.registerExcludedBlock(block);
-        }
-    }
-
-    private static void registerTargetExcludedBlocks(UnderlayConfig config) {
-        for (String blockIdString : config.getTargetExcludeBlocks()) {
-            ResourceLocation blockId;
-
-            try {
-                blockId = new ResourceLocation(blockIdString);
-            } catch (Exception e) {
-                Underlay.LOGGER.warn("Invalid block ID in underlay config: " + blockIdString);
-                continue;
-            }
-
-            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
-            if (block == null) {
-                Underlay.LOGGER.warn("Missing block in underlay config: " + blockId);
-                continue;
-            }
-
-            UnderlayRegistry.registerTargetExcludedBlock(block);
+            register.accept(block);
         }
     }
 
