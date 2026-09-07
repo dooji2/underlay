@@ -107,9 +107,9 @@ public final class UnderlaySodiumCompat {
 
         private static Vector3fc scale(Vector3fc pos) {
             return new Vector3f(
-                (pos.x() - 0.5F) * 1.0001F + 0.5F,
-                (pos.y() - 0.5F) * 1.0001F + 0.5F,
-                (pos.z() - 0.5F) * 1.0001F + 0.5F
+                (pos.x() - 0.5F) * 1.001F + 0.5F,
+                (pos.y() - 0.5F) * 1.001F + 0.5F,
+                (pos.z() - 0.5F) * 1.001F + 0.5F
             );
         }
     }

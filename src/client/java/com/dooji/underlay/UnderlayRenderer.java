@@ -111,7 +111,7 @@ public class UnderlayRenderer {
 
             try {
                 poseStack.translate(x + 0.5D, y + 0.5D, z + 0.5D);
-                poseStack.scale(1.0001F, 1.0001F, 1.0001F);
+                poseStack.scale(1.001F, 1.001F, 1.001F);
                 poseStack.translate(-x - 0.5D, -y - 0.5D, -z - 0.5D);
                 renderer.bufferModel(blockRenderer.getBlockModel(state), state, pos);
             } finally {
