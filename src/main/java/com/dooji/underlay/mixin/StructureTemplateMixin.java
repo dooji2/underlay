@@ -117,9 +117,7 @@ public abstract class StructureTemplateMixin {
             return;
         }
 
-        if (!(world instanceof ServerWorld serverWorld)) {
-            return;
-        }
+        ServerWorld serverWorld = world.toServerWorld();
 
         for (Map.Entry<BlockPos, BlockState> entry : relativeOverlays.entrySet()) {
             BlockPos transformed = transform(settings, entry.getKey());
