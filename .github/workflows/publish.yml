@@ -129,6 +129,11 @@ jobs:
               LOADER_LINES=$'fabric'
               GAME_VERSION_LINES=$'26.2'
               ;;
+            26.3)
+              DISPLAY_VERSION='26.3'
+              LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'26.3'
+              ;;
             *)
               echo "Unsupported branch for publish mapping: $BRANCH"
               exit 1
