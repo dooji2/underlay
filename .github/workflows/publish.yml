@@ -36,7 +36,7 @@ jobs:
             1.12.2)
               JAVA_VERSION=8
               ;;
-            26.*)
+            26.*|neoforge-26.*)
               JAVA_VERSION=25
               ;;
             *)
@@ -132,6 +132,16 @@ jobs:
             26.3)
               DISPLAY_VERSION='26.3'
               LOADER_LINES=$'fabric'
+              GAME_VERSION_LINES=$'26.3'
+              ;;
+            neoforge-26.1)
+              DISPLAY_VERSION='26.1.2'
+              LOADER_LINES=$'neoforge'
+              GAME_VERSION_LINES=$'26.1.2'
+              ;;
+            neoforge-26.3)
+              DISPLAY_VERSION='26.3'
+              LOADER_LINES=$'neoforge'
               GAME_VERSION_LINES=$'26.3'
               ;;
             *)
