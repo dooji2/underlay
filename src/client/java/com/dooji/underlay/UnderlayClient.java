@@ -3,18 +3,21 @@ package com.dooji.underlay;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.dooji.underlay.flashback.FlashbackCompat;
 import com.dooji.underlay.jade.JadeComponents;
 import com.dooji.underlay.mixin.client.ClientPlayerInteractionManagerAccessor;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -25,18 +28,29 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundSource;
 
-public class UnderlayClient implements ClientModInitializer {
-	private static final boolean IS_FLASHBACK_INSTALLED = FabricLoader.getInstance().isModLoaded("flashback");
+@Mod(value = Underlay.MOD_ID, dist = Dist.CLIENT)
+public class UnderlayClient {
+	public UnderlayClient(IEventBus modEventBus) {
+		modEventBus.addListener(this::registerPayloads);
+		onInitializeClient();
+	}
 
-	@Override
 	public void onInitializeClient() {
-		if (FabricLoader.getInstance().isModLoaded("jade")) {
+		if (ModList.get().isLoaded("jade")) {
 			JadeComponents.init();
 		}
 
-		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+		NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> onClientTick(Minecraft.getInstance()));
 
-		ClientPlayNetworking.registerGlobalReceiver(SyncOverlaysPayload.ID, (payload, context) -> {
+		UnderlayRenderer.init();
+		NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+			UnderlayRenderer.clearAllOverlays();
+			UnderlayManagerClient.removeAll();
+		});
+	}
+
+	private void registerPayloads(RegisterClientPayloadHandlersEvent event) {
+		event.register(SyncOverlaysPayload.ID, (payload, context) -> {
 			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
 				HolderLookup<Block> lookup = client.getConnection().registryAccess().lookupOrThrow(Registries.BLOCK);
@@ -51,7 +65,7 @@ public class UnderlayClient implements ClientModInitializer {
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(AddOverlayPayload.ID, (payload, context) -> {
+		event.register(AddOverlayPayload.ID, (payload, context) -> {
 			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
 				HolderLookup<Block> lookup = client.getConnection().registryAccess().lookupOrThrow(Registries.BLOCK);
@@ -64,7 +78,7 @@ public class UnderlayClient implements ClientModInitializer {
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
+		event.register(RemoveOverlayPayload.ID, (payload, context) -> {
 			Minecraft client = Minecraft.getInstance();
 			client.execute(() -> {
 				BlockPos pos = payload.pos();
@@ -72,26 +86,13 @@ public class UnderlayClient implements ClientModInitializer {
 
 				UnderlayRenderer.unregisterOverlay(pos);
 				UnderlayManagerClient.syncRemove(pos);
-				client.level.playSound(client.player, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1f, 1f);
+				client.level.playSound(client.player, pos, state.getSoundType(client.level, pos, client.player).getBreakSound(), SoundSource.BLOCKS, 1f, 1f);
 			});
-		});
-
-		UnderlayRenderer.init();
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, cli) -> {
-			UnderlayRenderer.clearAllOverlays();
-			UnderlayManagerClient.removeAll();
-
-			if (IS_FLASHBACK_INSTALLED) {
-				FlashbackCompat.onDisconnect();
-			}
 		});
 	}
 
 	private void onClientTick(Minecraft client) {
 		if (client.player == null || client.level == null) return;
-		if (IS_FLASHBACK_INSTALLED) {
-			FlashbackCompat.onClientTick(client);
-		}
 
 		if (client.gui.screen() != null) return;
 
@@ -110,7 +111,7 @@ public class UnderlayClient implements ClientModInitializer {
 
 	public static void breakOverlay(Minecraft client, BlockPos pos) {
 		ClientPlayerInteractionManagerAccessor interactionManager = (ClientPlayerInteractionManagerAccessor) client.gameMode;
-		ClientPlayNetworking.send(new RemoveOverlayPayload(pos));
+		ClientPacketDistributor.sendToServer(new RemoveOverlayPayload(pos));
 		interactionManager.setBlockBreakingCooldown(5);
 	}
 

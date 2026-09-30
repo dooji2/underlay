@@ -1,9 +1,12 @@
 package com.dooji.underlay;
 
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -14,34 +17,47 @@ import org.slf4j.LoggerFactory;
 
 import com.dooji.underlay.network.UnderlayNetworking;
 
-public class Underlay implements ModInitializer {
+@Mod(Underlay.MOD_ID)
+public class Underlay {
 	public static final String MOD_ID = "underlay";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	public static final TagKey<Block> OVERLAY_TAG = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, "overlay"));
 	public static final TagKey<Block> EXCLUDE_TAG = TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, "exclude"));
 
-	@Override
+	public Underlay(IEventBus modEventBus) {
+		modEventBus.addListener(UnderlayNetworking::registerPayloads);
+		onInitialize();
+	}
+
 	public void onInitialize() {
 		UnderlayNetworking.init();
 		UnderlayCommands.register();
 		
-		ServerLevelEvents.LOAD.register((server, world) -> {
+		NeoForge.EVENT_BUS.addListener((LevelEvent.Load event) -> {
+			if (!(event.getLevel() instanceof ServerLevel world)) {
+				return;
+			}
+
 			LOGGER.info("Loading overlays for world: " + world.dimension().identifier());
 			UnderlayManager.loadOverlays(world);
 			UnderlayConfig.load(world);
 		});
 
-		ServerTickEvents.END_SERVER_TICK.register(server -> UnderlayPersistenceHandler.flushPendingSaves());
-		ServerLevelEvents.UNLOAD.register((server, world) -> UnderlayPersistenceHandler.flushPendingSave(world));
-		ServerLifecycleEvents.SERVER_STOPPING.register(server -> UnderlayPersistenceHandler.flushAllPendingSaves());
+		NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post server) -> UnderlayPersistenceHandler.flushPendingSaves());
+		NeoForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
+			if (event.getLevel() instanceof ServerLevel world) {
+				UnderlayPersistenceHandler.flushPendingSave(world);
+			}
+		});
 
-		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
-            if (!success) {
+		NeoForge.EVENT_BUS.addListener((ServerStoppingEvent server) -> UnderlayPersistenceHandler.flushAllPendingSaves());
+		NeoForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> {
+            if (event.getPlayer() != null) {
 				return;
 			}
 
-            for (ServerLevel world : server.getAllLevels()) {
+            for (ServerLevel world : event.getPlayerList().getServer().getAllLevels()) {
                 UnderlayConfig.load(world);
             }
         });

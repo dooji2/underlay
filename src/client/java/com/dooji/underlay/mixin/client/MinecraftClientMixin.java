@@ -12,7 +12,7 @@ import com.dooji.underlay.UnderlayManagerClient;
 import com.dooji.underlay.UnderlayRaycast;
 import com.dooji.underlay.network.payloads.PickItemFromOverlayPayload;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -67,7 +67,7 @@ public class MinecraftClientMixin {
         BlockPos overlayPos = UnderlayClient.findOverlayUnderCrosshair(client);
 
         if (overlayPos != null && UnderlayManagerClient.hasOverlay(overlayPos)) {
-            ClientPlayNetworking.send(new PickItemFromOverlayPayload(overlayPos));
+            ClientPacketDistributor.sendToServer(new PickItemFromOverlayPayload(overlayPos));
             ci.cancel();
         }
     }

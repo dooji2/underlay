@@ -1,6 +1,7 @@
 package com.dooji.underlay.mixin.client;
 
 import java.util.Map;
+import java.util.List;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import org.spongepowered.asm.mixin.Final;
@@ -15,9 +16,9 @@ import com.dooji.underlay.UnderlayRenderer;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexSorting;
-import net.fabricmc.fabric.api.client.renderer.v1.Renderer;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.client.renderer.v1.render.AltModelBlockRenderer;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.renderer.SectionBufferBuilderPack;
 import net.minecraft.client.renderer.block.BlockStateModelSet;
@@ -47,22 +48,25 @@ public abstract class SectionCompilerMixin {
     protected abstract BufferBuilder invokeGetOrBeginLayer(Map<ChunkSectionLayer, BufferBuilder> startedLayers, SectionBufferBuilderPack buffers, ChunkSectionLayer layer);
 
     @Inject(
-        method = "compile",
+        method = "compile(Lnet/minecraft/core/SectionPos;Lnet/minecraft/client/renderer/chunk/RenderSectionRegion;Lcom/mojang/blaze3d/vertex/VertexSorting;Lnet/minecraft/client/renderer/SectionBufferBuilderPack;Ljava/util/List;)Lnet/minecraft/client/renderer/chunk/SectionCompiler$Results;",
         at = @At(
             value = "INVOKE",
             target = "Ljava/util/Map;entrySet()Ljava/util/Set;",
             ordinal = 0
         )
     )
-    private void onCompile(SectionPos sectionPos, RenderSectionRegion region, VertexSorting vertexSorting, SectionBufferBuilderPack builders, CallbackInfoReturnable<SectionCompiler.Results> cir, @Local(ordinal = 0) Map<ChunkSectionLayer, BufferBuilder> startedLayers) {
+    private void onCompile(SectionPos sectionPos, RenderSectionRegion region, VertexSorting vertexSorting, SectionBufferBuilderPack builders, List<AddSectionGeometryEvent.AdditionalSectionRenderer> additionalRenderers, CallbackInfoReturnable<SectionCompiler.Results> cir, @Local(ordinal = 0) Map<ChunkSectionLayer, BufferBuilder> startedLayers) {
         Map<BlockPos, BlockState> overlays = UnderlayRenderer.getSectionOverlays(sectionPos.asLong());
         if (overlays.isEmpty()) {
             return;
         }
 
-        Renderer renderer = Renderer.get();
-        AltModelBlockRenderer blockRenderer = renderer.altModelBlockRenderer(ambientOcclusion, true, blockColors);
-        QuadEmitter quadEmitter = renderer.quadEmitter(quad -> quad.buffer(OverlayTexture.NO_OVERLAY, invokeGetOrBeginLayer(startedLayers, builders, quad.chunkLayer())));
+        ModelBlockRenderer blockRenderer = new ModelBlockRenderer(ambientOcclusion, true, blockColors);
+        BlockQuadOutput quadEmitter = (x, y, z, quad, quadInstance) -> {
+            quadInstance.setOverlayCoords(OverlayTexture.NO_OVERLAY);
+            invokeGetOrBeginLayer(startedLayers, builders, quad.materialInfo().layer()).putBlockBakedQuad(x, y, z, quad, quadInstance);
+        };
+
         UnderlayRenderer.renderSectionOverlays(region, blockRenderer, quadEmitter, blockModelSet, overlays);
     }
 }

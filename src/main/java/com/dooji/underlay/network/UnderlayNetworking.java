@@ -7,14 +7,13 @@ import com.dooji.underlay.UnderlayManager;
 import com.dooji.underlay.network.payloads.AddOverlayPayload;
 import com.dooji.underlay.network.payloads.PickItemFromOverlayPayload;
 import com.dooji.underlay.network.payloads.RemoveOverlayPayload;
-import com.dooji.underlay.network.payloads.RequestOverlaySyncPayload;
 import com.dooji.underlay.network.payloads.SyncOverlaysPayload;
 
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -28,27 +27,26 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class UnderlayNetworking {
 	public static void init() {
-		PayloadTypeRegistry.clientboundPlay().register(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(PickItemFromOverlayPayload.ID, PickItemFromOverlayPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(RequestOverlaySyncPayload.ID, RequestOverlaySyncPayload.CODEC);
-
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			syncOverlaysToPlayer(handler.getPlayer());
+		NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
+			syncOverlaysToPlayer((ServerPlayer) event.getEntity());
 		});
 
-		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, from, to) -> {
-			syncOverlaysToPlayer(player);
+		NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerChangedDimensionEvent event) -> {
+			syncOverlaysToPlayer((ServerPlayer) event.getEntity());
 		});
 
-		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
-			syncOverlaysToPlayer(newPlayer);
+		NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerRespawnEvent event) -> {
+			syncOverlaysToPlayer((ServerPlayer) event.getEntity());
 		});
+	}
 
-		ServerPlayNetworking.registerGlobalReceiver(RemoveOverlayPayload.ID, (payload, context) -> {
-			ServerPlayer player = context.player();
+	public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+		PayloadRegistrar registrar = event.registrar("1");
+		registrar.playToClient(SyncOverlaysPayload.ID, SyncOverlaysPayload.CODEC);
+		registrar.playToClient(AddOverlayPayload.ID, AddOverlayPayload.CODEC);
+
+		registrar.playBidirectional(RemoveOverlayPayload.ID, RemoveOverlayPayload.CODEC, (payload, context) -> {
+			ServerPlayer player = (ServerPlayer) context.player();
 			ServerLevel world = (ServerLevel) player.level();
 			BlockPos pos = payload.pos();
 
@@ -68,8 +66,8 @@ public class UnderlayNetworking {
 			}
 		});
 
-		ServerPlayNetworking.registerGlobalReceiver(PickItemFromOverlayPayload.ID, (payload, context) -> {
-			ServerPlayer player = context.player();
+		registrar.playToServer(PickItemFromOverlayPayload.ID, PickItemFromOverlayPayload.CODEC, (payload, context) -> {
+			ServerPlayer player = (ServerPlayer) context.player();
 			ServerLevel world = (ServerLevel) player.level();
 			BlockPos pos = payload.pos();
 
@@ -103,9 +101,6 @@ public class UnderlayNetworking {
 			}
 		});
 
-		ServerPlayNetworking.registerGlobalReceiver(RequestOverlaySyncPayload.ID, (payload, context) -> {
-			syncOverlaysToPlayer(context.player());
-		});
 	}
 
 	public static void syncOverlaysToPlayer(ServerPlayer player) {
@@ -116,7 +111,7 @@ public class UnderlayNetworking {
 			tags.put(pos, NbtUtils.writeBlockState(state))
 		);
 
-		ServerPlayNetworking.send(player, new SyncOverlaysPayload(tags));
+		PacketDistributor.sendToPlayer(player, new SyncOverlaysPayload(tags));
 	}
 
 	public static void broadcastAdd(ServerLevel world, BlockPos pos) {
@@ -124,7 +119,7 @@ public class UnderlayNetworking {
 		AddOverlayPayload payload = new AddOverlayPayload(pos, tag);
 
 		for (ServerPlayer p : world.players()) {
-			ServerPlayNetworking.send(p, payload);
+			PacketDistributor.sendToPlayer(p, payload);
 		}
 	}
 
@@ -132,7 +127,7 @@ public class UnderlayNetworking {
 		RemoveOverlayPayload payload = new RemoveOverlayPayload(pos);
 
 		for (ServerPlayer p : world.players()) {
-			ServerPlayNetworking.send(p, payload);
+			PacketDistributor.sendToPlayer(p, payload);
 		}
 	}
 }

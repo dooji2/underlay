@@ -8,7 +8,7 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.extent.buffer.ForgetfulExtentBuffer;
 import com.sk89q.worldedit.extent.transform.BlockTransformExtent;
-import com.sk89q.worldedit.fabric.FabricAdapter;
+import com.sk89q.worldedit.neoforge.NeoForgeAdapter;
 import com.sk89q.worldedit.history.UndoContext;
 import com.sk89q.worldedit.history.change.Change;
 import com.sk89q.worldedit.history.changeset.ChangeSet;
@@ -64,12 +64,12 @@ public final class UnderlayWorldEdit {
 
         if (extent instanceof BlockTransformExtent transformExtent) {
             BlockState overlay = getOverlay(transformExtent.getExtent(), position);
-            return overlay == null ? null : FabricAdapter.get().toNativeBlockState(BlockTransformExtent.transform(FabricAdapter.get().fromNativeBlockState(overlay), transformExtent.getTransform()));
+            return overlay == null ? null : NeoForgeAdapter.get().toNativeBlockState(BlockTransformExtent.transform(NeoForgeAdapter.get().fromNativeBlockState(overlay), transformExtent.getTransform()));
         }
 
         if (extent instanceof EditSession editSession) {
-            ServerLevel world = FabricAdapter.get().toNativeWorld(editSession.getWorld());
-            return UnderlayManager.getOverlaysFor(world).get(FabricAdapter.get().toBlockPos(position));
+            ServerLevel world = NeoForgeAdapter.get().toNativeWorld(editSession.getWorld());
+            return UnderlayManager.getOverlaysFor(world).get(NeoForgeAdapter.get().toBlockPos(position));
         }
 
         return null;
@@ -86,8 +86,8 @@ public final class UnderlayWorldEdit {
             return;
         }
 
-        ServerLevel world = FabricAdapter.get().toNativeWorld(editSession.getWorld());
-        BlockPos pos = FabricAdapter.get().toBlockPos(position);
+        ServerLevel world = NeoForgeAdapter.get().toNativeWorld(editSession.getWorld());
+        BlockPos pos = NeoForgeAdapter.get().toBlockPos(position);
         editSession.getChangeSet().add(new OverlayChange(world, pos, null, overlay));
         setOverlay(world, pos, overlay);
     }

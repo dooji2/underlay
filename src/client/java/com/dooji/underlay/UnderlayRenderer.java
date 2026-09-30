@@ -1,18 +1,17 @@
 package com.dooji.underlay;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.client.renderer.v1.render.AltModelBlockRenderer;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.model.quad.MutableQuad;
+import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockStateModelSet;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -33,7 +32,7 @@ public class UnderlayRenderer {
     private static final Map<BlockPos, CachedBlockEntity> BE_CACHE = new ConcurrentHashMap<>();
 
     public static void init() {
-        LevelRenderEvents.COLLECT_SUBMITS.register(UnderlayRenderer::renderOverlayBlockEntities);
+        NeoForge.EVENT_BUS.addListener(UnderlayRenderer::renderOverlayBlockEntities);
     }
 
     public static void registerOverlay(BlockPos pos, BlockState state) {
@@ -97,7 +96,7 @@ public class UnderlayRenderer {
         return sectionOverlays;
     }
 
-    public static void renderSectionOverlays(RenderSectionRegion region, AltModelBlockRenderer blockRenderer, QuadEmitter quadEmitter, BlockStateModelSet blockModelSet, Map<BlockPos, BlockState> overlays) {
+    public static void renderSectionOverlays(RenderSectionRegion region, ModelBlockRenderer blockRenderer, BlockQuadOutput quadEmitter, BlockStateModelSet blockModelSet, Map<BlockPos, BlockState> overlays) {
         for (Map.Entry<BlockPos, BlockState> overlay : overlays.entrySet()) {
             BlockPos pos = overlay.getKey();
             BlockState state = overlay.getValue();
@@ -105,31 +104,22 @@ public class UnderlayRenderer {
             int y = SectionPos.sectionRelative(pos.getY());
             int z = SectionPos.sectionRelative(pos.getZ());
 
-            quadEmitter.pushTransform(quad -> {
+            blockRenderer.tesselateBlock((offsetX, offsetY, offsetZ, quad, quadInstance) -> {
+                MutableQuad mutableQuad = new MutableQuad().setFrom(quad);
                 for (int i = 0; i < 4; i++) {
-                    quad.pos(i,
-                        (quad.x(i) - x - 0.5F) * 1.001F + x + 0.5F,
-                        (quad.y(i) - y - 0.5F) * 1.001F + y + 0.5F,
-                        (quad.z(i) - z - 0.5F) * 1.001F + z + 0.5F
+                    mutableQuad.setPosition(i,
+                        (mutableQuad.x(i) + offsetX - x - 0.5F) * 1.001F + x + 0.5F - offsetX,
+                        (mutableQuad.y(i) + offsetY - y - 0.5F) * 1.001F + y + 0.5F - offsetY,
+                        (mutableQuad.z(i) + offsetZ - z - 0.5F) * 1.001F + z + 0.5F - offsetZ
                     );
                 }
-                return true;
-            });
 
-            try {
-                blockRenderer.tesselateBlock(quadEmitter, x, y, z, region, pos, state, blockModelSet.get(state), state.getSeed(pos));
-            } finally {
-                quadEmitter.popTransform();
-            }
+                quadEmitter.put(offsetX, offsetY, offsetZ, mutableQuad.toBakedQuad(), quadInstance);
+            }, x, y, z, region, pos, state, blockModelSet.get(state), state.getSeed(pos));
         }
     }
 
-    private static PoseStack getMatrices(LevelRenderContext context) {
-        PoseStack matrices = context.poseStack();
-        return matrices != null ? matrices : new PoseStack();
-    }
-
-    private static void renderOverlayBlockEntities(LevelRenderContext context) {
+    private static void renderOverlayBlockEntities(ExtractLevelRenderStateEvent context) {
         if (BE_STATES.isEmpty()) {
             return;
         }
@@ -137,13 +127,11 @@ public class UnderlayRenderer {
         renderBlockEntities(context);
     }
 
-    private static void renderBlockEntities(LevelRenderContext context) {
+    private static void renderBlockEntities(ExtractLevelRenderStateEvent context) {
         Minecraft client = Minecraft.getInstance();
-        PoseStack matrices = getMatrices(context);
-        LevelRenderState worldState = context.levelState();
-        SubmitNodeCollector commandQueue = context.submitNodeCollector();
-        ClientLevel world = client.level;
-        if (worldState == null || commandQueue == null || world == null || client.player == null) {
+        LevelRenderState worldState = context.getRenderState();
+        ClientLevel world = context.getLevel();
+        if (worldState == null || world == null || client.player == null) {
             return;
         }
 
@@ -154,7 +142,6 @@ public class UnderlayRenderer {
         BlockEntityRenderDispatcher blockEntityRenderer = client.getBlockEntityRenderDispatcher();
         blockEntityRenderer.prepare(cameraPos);
 
-        matrices.pushPose();
         for (Map.Entry<BlockPos, BlockState> overlay : BE_STATES.entrySet()) {
             BlockPos pos = overlay.getKey();
             BlockState state = overlay.getValue();
@@ -177,16 +164,11 @@ public class UnderlayRenderer {
                 continue;
             }
 
-            matrices.pushPose();
-            matrices.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
-            BlockEntityRenderState blockEntityRenderState = blockEntityRenderer.tryExtractRenderState(blockEntity, client.getDeltaTracker().getGameTimeDeltaTicks(), null, renderer.shouldRenderOffScreen());
+            BlockEntityRenderState blockEntityRenderState = blockEntityRenderer.tryExtractRenderState(blockEntity, context.getDeltaTracker().getGameTimeDeltaTicks(), null, renderer.shouldRenderOffScreen(), null);
             if (blockEntityRenderState != null) {
-                blockEntityRenderer.submit(blockEntityRenderState, matrices, commandQueue, worldState.cameraRenderState);
+                worldState.blockEntityRenderStates.add(blockEntityRenderState);
             }
-            matrices.popPose();
         }
-
-        matrices.popPose();
     }
 
     private static BlockEntity getOrCreateBlockEntity(ClientLevel world, BlockPos pos, BlockState state, EntityBlock entityBlock) {

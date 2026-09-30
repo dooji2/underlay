@@ -4,7 +4,7 @@ import com.dooji.underlay.worldedit.UnderlayWorldEdit;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.coremc.internal.CoreMcWorld;
 import com.sk89q.worldedit.extent.Extent;
-import com.sk89q.worldedit.fabric.FabricAdapter;
+import com.sk89q.worldedit.neoforge.NeoForgeAdapter;
 import com.sk89q.worldedit.function.block.BlockReplace;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.math.BlockVector3;
@@ -48,7 +48,7 @@ public abstract class WorldEditBlockReplaceMixin {
 
         if (extent instanceof EditSession editSession && editSession.getWorld() instanceof CoreMcWorld coreMcWorld) {
             ServerLevel world = coreMcWorld.getWorld();
-            UnderlayWorldEdit.removeOverlay(editSession.getChangeSet(), world, FabricAdapter.get().toBlockPos(position));
+            UnderlayWorldEdit.removeOverlay(editSession.getChangeSet(), world, NeoForgeAdapter.get().toBlockPos(position));
         }
     }
 }

@@ -5,7 +5,7 @@ import com.sk89q.worldedit.coremc.internal.CoreMcWorld;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.ChangeSetExtent;
 import com.sk89q.worldedit.extent.Extent;
-import com.sk89q.worldedit.fabric.FabricAdapter;
+import com.sk89q.worldedit.neoforge.NeoForgeAdapter;
 import com.sk89q.worldedit.history.changeset.ChangeSet;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.block.BlockStateHolder;
@@ -40,7 +40,7 @@ public abstract class WorldEditChangeSetExtentMixin {
         }
 
         ServerLevel world = coreMcWorld.getWorld();
-        BlockPos blockPos = FabricAdapter.get().toBlockPos(location);
+        BlockPos blockPos = NeoForgeAdapter.get().toBlockPos(location);
         UnderlayWorldEdit.removeOverlay(changeSet, world, blockPos);
     }
 }

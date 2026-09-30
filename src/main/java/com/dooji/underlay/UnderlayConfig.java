@@ -18,7 +18,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -291,6 +291,6 @@ public class UnderlayConfig {
 	}
 
 	private static File getConfigFile() {
-		return FabricLoader.getInstance().getConfigDir().resolve("Underlay").resolve(CONFIG_FILE_NAME).toFile();
+		return FMLPaths.CONFIGDIR.get().resolve("Underlay").resolve(CONFIG_FILE_NAME).toFile();
 	}
 }
