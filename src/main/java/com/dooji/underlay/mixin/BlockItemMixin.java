@@ -125,7 +125,7 @@ public abstract class BlockItemMixin {
 				stack.shrink(1);
 			}
 
-			SoundType sounds = overlay.getSoundType();
+			SoundType sounds = overlay.getSoundType(world, pos, player);
 			world.playSound(null, pos, sounds.getPlaceSound(), SoundSource.BLOCKS, sounds.getVolume(), sounds.getPitch());
 		}
 

@@ -12,12 +12,14 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline.BlockRend
 
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.TriState;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class UnderlaySodiumCompat {
@@ -58,13 +60,32 @@ public final class UnderlaySodiumCompat {
         }
 
         @Override
+        public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random, List<BlockStateModelPart> parts) {
+            int firstPart = parts.size();
+            model.collectParts(level, pos, state, random, parts);
+            for (int i = firstPart; i < parts.size(); i++) {
+                parts.set(i, new ScaledBlockStateModelPart(parts.get(i)));
+            }
+        }
+
+        @Override
         public Material.Baked particleMaterial() {
             return model.particleMaterial();
         }
 
         @Override
+        public Material.Baked particleMaterial(BlockAndTintGetter level, BlockPos pos, BlockState state) {
+            return model.particleMaterial(level, pos, state);
+        }
+
+        @Override
         public int materialFlags() {
             return model.materialFlags();
+        }
+
+        @Override
+        public int materialFlags(BlockAndTintGetter level, BlockPos pos, BlockState state) {
+            return model.materialFlags(level, pos, state);
         }
     }
 
@@ -90,7 +111,9 @@ public final class UnderlaySodiumCompat {
                     quad.packedUV2(),
                     quad.packedUV3(),
                     quad.direction(),
-                    quad.materialInfo()
+                    quad.materialInfo(),
+                    quad.bakedNormals(),
+                    quad.bakedColors()
                 ));
             }
 
@@ -99,7 +122,12 @@ public final class UnderlaySodiumCompat {
 
         @Override
         public boolean useAmbientOcclusion() {
-            return part.useAmbientOcclusion();
+            return part.ambientOcclusion() != TriState.FALSE;
+        }
+
+        @Override
+        public TriState ambientOcclusion() {
+            return part.ambientOcclusion();
         }
 
         @Override
