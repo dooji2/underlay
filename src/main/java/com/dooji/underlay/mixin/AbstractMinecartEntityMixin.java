@@ -3,11 +3,12 @@ package com.dooji.underlay.mixin;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.dooji.underlay.UnderlayManager;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import net.minecraft.block.AbstractRailBlock;
 import net.minecraft.block.BlockState;
@@ -20,9 +21,9 @@ public class AbstractMinecartEntityMixin {
     
     @Shadow private boolean onRail;
 
-    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
-    private BlockState redirectGetStateInTick(World world, BlockPos pos) {
-        BlockState originalState = world.getBlockState(pos);
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
+    private BlockState wrapGetStateInTick(World world, BlockPos pos, Operation<BlockState> original) {
+        BlockState originalState = original.call(world, pos);
 
         if (originalState.getBlock() instanceof AbstractRailBlock) return originalState;
         if (UnderlayManager.hasOverlay(world, pos)) {
@@ -33,14 +34,14 @@ public class AbstractMinecartEntityMixin {
         return originalState;
     }
 
-    @Redirect(method = "snapPositionToRail", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
-    private BlockState redirectGetStateInSnap(World world, BlockPos pos) {
-        return redirectGetStateInTick(world, pos);
+    @WrapOperation(method = "snapPositionToRail", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
+    private BlockState wrapGetStateInSnap(World world, BlockPos pos, Operation<BlockState> original) {
+        return wrapGetStateInTick(world, pos, original);
     }
 
-    @Redirect(method = "snapPositionToRailWithOffset", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
-    private BlockState redirectGetStateInSnapOffset(World world, BlockPos pos) {
-        return redirectGetStateInTick(world, pos);
+    @WrapOperation(method = "snapPositionToRailWithOffset", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/BlockState;"))
+    private BlockState wrapGetStateInSnapOffset(World world, BlockPos pos, Operation<BlockState> original) {
+        return wrapGetStateInTick(world, pos, original);
     }
 
     @Inject(method = "tick", at = @At(value = "FIELD", target = "Lnet/minecraft/entity/vehicle/AbstractMinecartEntity;onRail:Z", shift = At.Shift.AFTER))
