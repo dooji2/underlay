@@ -3,10 +3,9 @@ name: Publish Underlay
 on:
   workflow_dispatch:
     inputs:
-      target_branch:
-        description: "Branch to build and publish from"
-        required: true
-        default: "main"
+      branches:
+        description: "Branches to build and publish from"
+        required: false
       version:
         description: "Version number"
         required: true
@@ -18,20 +17,39 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.branches.outputs.branches }}
+
+    steps:
+      - name: Get branches
+        id: branches
+        env:
+          BRANCHES: ${{ inputs.branches || 'main,1.12.2,1.20.1,1.21.2,1.21.5,1.21.6,1.21.9,1.21.11,forge-1.20.1,neoforge-1.21,26.1,26.2,26.3,neoforge-26.1,neoforge-26.3' }}
+        run: |
+          echo "branches=$(jq -cn --arg branches "$BRANCHES" '$branches | split(",") | map(gsub("^\\s+|\\s+$"; "")) | unique')" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJSON(needs.prepare.outputs.branches) }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_branch }}
+          ref: ${{ matrix.branch }}
 
       - name: Java version
         id: java
         run: |
           set -euo pipefail
-          BRANCH="${{ inputs.target_branch }}"
+          BRANCH="${{ matrix.branch }}"
           case "$BRANCH" in
             1.12.2)
               JAVA_VERSION=8
@@ -65,7 +83,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          BRANCH="${{ inputs.target_branch }}"
+          BRANCH="${{ matrix.branch }}"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
           case "$BRANCH" in
